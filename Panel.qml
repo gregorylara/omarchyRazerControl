@@ -43,6 +43,7 @@ Panel {
   property string currentEffectColor: "#00FF66"
   property var allProfiles: []
   property bool isPolling: false
+  property bool initialPollDone: false
 
   visible: !onlyWhenConnected || deviceConnected
   implicitWidth: visible ? button.implicitWidth : 0
@@ -190,9 +191,12 @@ Panel {
         root.currentEffectColor = state.effect_color
         root.allProfiles = state.profiles
 
-        if (!wasConnected && newlyConnected) {
-          root.sendConnectionNotification(state.name, state.dpi, state.poll_rate)
+        if (root.initialPollDone) {
+          if (!wasConnected && newlyConnected) {
+            root.sendConnectionNotification(state.name, state.dpi, state.poll_rate)
+          }
         }
+        root.initialPollDone = true
       }
     }
     onExited: function(code) {

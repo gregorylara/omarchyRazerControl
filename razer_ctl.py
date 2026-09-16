@@ -15,9 +15,9 @@ from pathlib import Path
 
 # Paths
 SCRIPT_DIR = Path(__file__).resolve().parent
-CONFIG_DIR = Path.home() / ".config" / "omarchy" / "plugins" / "oma.razer"
-PROFILES_FILE = CONFIG_DIR / "profiles.json"
-LOCAL_PROFILES_FILE = SCRIPT_DIR / "profiles.json"
+STATE_DIR = Path.home() / ".local" / "state" / "omarchy" / "razer"
+PROFILES_FILE = STATE_DIR / "profiles.json"
+TEMPLATE_PROFILES_FILE = SCRIPT_DIR / "profiles.json"
 
 # Razer USB Vendor ID
 RAZER_VID = 0x1532
@@ -383,9 +383,7 @@ class RazerDeviceManager:
 class ProfileStorage:
     @staticmethod
     def get_storage_path():
-        if CONFIG_DIR.exists():
-            return PROFILES_FILE
-        return LOCAL_PROFILES_FILE
+        return PROFILES_FILE
 
     @staticmethod
     def load():
@@ -396,18 +394,22 @@ class ProfileStorage:
                     return json.load(f)
             except Exception:
                 pass
+        if TEMPLATE_PROFILES_FILE.exists():
+            try:
+                with open(TEMPLATE_PROFILES_FILE, "r") as f:
+                    return json.load(f)
+            except Exception:
+                pass
         return DEFAULT_PROFILES_DATA
 
     @staticmethod
     def save(data):
-        # Save to both config dir and local repo if available
-        for target in [PROFILES_FILE, LOCAL_PROFILES_FILE]:
-            try:
-                target.parent.mkdir(parents=True, exist_ok=True)
-                with open(target, "w") as f:
-                    json.dump(data, f, indent=2)
-            except Exception:
-                pass
+        try:
+            PROFILES_FILE.parent.mkdir(parents=True, exist_ok=True)
+            with open(PROFILES_FILE, "w") as f:
+                json.dump(data, f, indent=2)
+        except Exception:
+            pass
 
 
 def get_current_state():
