@@ -245,7 +245,7 @@ Panel {
     bar: root.bar
     open: root.opened
     focusTarget: keyCatcher
-    contentWidth: panel.fittedContentWidth(Style.space(380))
+    contentWidth: panel.fittedContentWidth(Style.space(400))
     contentHeight: panel.fittedContentHeight(panelColumn.implicitHeight, Style.space(600))
 
     onOpenChanged: if (open) {
@@ -400,15 +400,14 @@ Panel {
             width: parent.width
             spacing: Style.space(8)
 
-            Row {
+            RowLayout {
               width: parent.width
               PanelSectionHeader {
                 text: "PERFILES EN MEMORIA (ON-BOARD)"
                 foreground: root.foreground
-                anchors.verticalCenter: parent.verticalCenter
               }
               Item {
-                width: parent.width - burnBtn.implicitWidth - Style.space(240)
+                Layout.fillWidth: true
                 height: 1
               }
               Rectangle {
@@ -509,15 +508,14 @@ Panel {
             width: parent.width
             spacing: Style.space(8)
 
-            Row {
+            RowLayout {
               width: parent.width
               PanelSectionHeader {
                 text: "SENSIBILIDAD (DPI)"
                 foreground: root.foreground
-                anchors.verticalCenter: parent.verticalCenter
               }
               Item {
-                width: parent.width - dpiValText.implicitWidth - Style.space(160)
+                Layout.fillWidth: true
                 height: 1
               }
               Text {
@@ -527,7 +525,6 @@ Panel {
                 font.pixelSize: Style.font.caption
                 color: Color.accent
                 font.bold: true
-                anchors.verticalCenter: parent.verticalCenter
               }
             }
 
@@ -595,15 +592,14 @@ Panel {
             width: parent.width
             spacing: Style.space(8)
 
-            Row {
+            RowLayout {
               width: parent.width
               PanelSectionHeader {
                 text: "TASA DE SONDEO (POLLING RATE)"
                 foreground: root.foreground
-                anchors.verticalCenter: parent.verticalCenter
               }
               Item {
-                width: parent.width - pollValText.implicitWidth - Style.space(220)
+                Layout.fillWidth: true
                 height: 1
               }
               Text {
@@ -613,7 +609,6 @@ Panel {
                 font.pixelSize: Style.font.caption
                 color: Color.accent
                 font.bold: true
-                anchors.verticalCenter: parent.verticalCenter
               }
             }
 
@@ -636,15 +631,14 @@ Panel {
             width: parent.width
             spacing: Style.space(8)
 
-            Row {
+            RowLayout {
               width: parent.width
               PanelSectionHeader {
                 text: "ILUMINACIÓN CHROMA RGB"
                 foreground: root.foreground
-                anchors.verticalCenter: parent.verticalCenter
               }
               Item {
-                width: parent.width - brightValText.implicitWidth - Style.space(200)
+                Layout.fillWidth: true
                 height: 1
               }
               Text {
@@ -654,7 +648,6 @@ Panel {
                 font.pixelSize: Style.font.caption
                 color: Color.accent
                 font.bold: true
-                anchors.verticalCenter: parent.verticalCenter
               }
             }
 

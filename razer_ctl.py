@@ -143,6 +143,13 @@ class RazerDeviceManager:
 
                 if vid == RAZER_VID:
                     dev_node = os.path.join("/dev", os.path.basename(path))
+                    # Clean up repeated Razer in device name
+                    clean_name = name.strip()
+                    if clean_name.startswith("Razer Razer"):
+                        clean_name = "Razer " + clean_name[11:].strip()
+                    elif not clean_name.startswith("Razer"):
+                        clean_name = "Razer " + clean_name
+
                     # Check interface number
                     interface = 0
                     try:
@@ -159,7 +166,7 @@ class RazerDeviceManager:
                     candidates.append({
                         "node": dev_node,
                         "sysfs": path,
-                        "name": name,
+                        "name": clean_name,
                         "vid": vid,
                         "pid": pid,
                         "interface": interface
