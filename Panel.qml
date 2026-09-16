@@ -40,7 +40,7 @@ Panel {
   property int currentPollRate: 1000
   property int currentBrightness: 100
   property string currentEffect: "spectrum"
-  property string currentEffectColor: "#00FF66"
+  property string currentEffectColor: "#00FF00"
   property var allProfiles: []
   property bool isPolling: false
   property bool initialPollDone: false
@@ -77,6 +77,8 @@ Panel {
     ])
   }
 
+  property double lastUserActionTime: 0
+
   function refresh() {
     if (pollProc.running) return
     isPolling = true
@@ -85,50 +87,62 @@ Panel {
 
   function applyDpi(val) {
     val = Math.max(100, Math.min(30000, Math.round(val)))
+    root.lastUserActionTime = Date.now()
     root.currentDpi = val
     Quickshell.execDetached([root.scriptPath, "set-dpi", String(val)])
-    Qt.callLater(function() { root.refresh() })
   }
 
   function applyStage(idx) {
     idx = Math.max(1, Math.min(5, idx))
+    root.lastUserActionTime = Date.now()
     root.currentActiveStage = idx
     if (root.currentDpiStages && root.currentDpiStages.length >= idx) {
       root.currentDpi = root.currentDpiStages[idx - 1]
     }
     Quickshell.execDetached([root.scriptPath, "set-stage", String(idx)])
-    Qt.callLater(function() { root.refresh() })
   }
 
   function applyPollRate(hz) {
     hz = parseInt(hz)
+    root.lastUserActionTime = Date.now()
     root.currentPollRate = hz
     Quickshell.execDetached([root.scriptPath, "set-poll-rate", String(hz)])
-    Qt.callLater(function() { root.refresh() })
   }
 
   function applyBrightness(val) {
     val = Math.max(0, Math.min(100, Math.round(val)))
+    root.lastUserActionTime = Date.now()
     root.currentBrightness = val
     Quickshell.execDetached([root.scriptPath, "set-brightness", String(val)])
-    Qt.callLater(function() { root.refresh() })
   }
 
   function applyEffect(eff, color) {
+    root.lastUserActionTime = Date.now()
     root.currentEffect = eff
     if (color) root.currentEffectColor = color
+    if (eff !== "off" && root.currentBrightness === 0) {
+      root.currentBrightness = 100
+    }
     Quickshell.execDetached([root.scriptPath, "set-effect", eff, "--color", root.currentEffectColor])
-    Qt.callLater(function() { root.refresh() })
   }
 
   function switchProfile(target) {
+    root.lastUserActionTime = Date.now()
     Quickshell.execDetached([root.scriptPath, "profile", "switch", String(target)])
-    Qt.callLater(function() { root.refresh() })
+    profileRefreshTimer.restart()
   }
 
   function saveToOnboard(slot) {
+    root.lastUserActionTime = Date.now()
     Quickshell.execDetached([root.scriptPath, "profile", "save", "--slot", String(slot)])
-    Qt.callLater(function() { root.refresh() })
+    profileRefreshTimer.restart()
+  }
+
+  Timer {
+    id: profileRefreshTimer
+    interval: 250
+    repeat: false
+    onTriggered: root.refresh()
   }
 
   function runSetupPermissions() {
@@ -149,6 +163,8 @@ Panel {
     function poll(val: string): void { root.applyPollRate(parseInt(val)) }
     function profile(val: string): void { root.switchProfile(val) }
     function brightness(val: string): void { root.applyBrightness(parseInt(val)) }
+    function effect(val: string): void { root.applyEffect(val, root.currentEffectColor) }
+    function color(val: string): void { root.applyEffect((root.currentEffect === "breathing") ? "breathing" : "static", val) }
   }
 
   IpcHandler {
@@ -161,6 +177,9 @@ Panel {
     function stage(val: string): void { root.applyStage(parseInt(val)) }
     function poll(val: string): void { root.applyPollRate(parseInt(val)) }
     function profile(val: string): void { root.switchProfile(val) }
+    function brightness(val: string): void { root.applyBrightness(parseInt(val)) }
+    function effect(val: string): void { root.applyEffect(val, root.currentEffectColor) }
+    function color(val: string): void { root.applyEffect((root.currentEffect === "breathing") ? "breathing" : "static", val) }
   }
 
   Process {
@@ -179,16 +198,20 @@ Panel {
         root.devicePid = state.pid
         root.supports8k = state.supports_8k
         root.hasPermission = state.has_permission
-        root.activeProfileId = state.activeProfile
-        root.activeProfileName = state.activeProfileName
-        root.currentOnboardSlot = state.onboardSlot
-        root.currentDpi = state.dpi
-        root.currentDpiStages = state.dpi_stages
-        root.currentActiveStage = state.active_stage
-        root.currentPollRate = state.poll_rate
-        root.currentBrightness = state.brightness
-        root.currentEffect = state.effect
-        root.currentEffectColor = state.effect_color
+
+        var now = Date.now()
+        if (now - root.lastUserActionTime > 2000) {
+          root.activeProfileId = state.activeProfile
+          root.activeProfileName = state.activeProfileName
+          root.currentOnboardSlot = state.onboardSlot
+          root.currentDpi = state.dpi
+          root.currentDpiStages = state.dpi_stages
+          root.currentActiveStage = state.active_stage
+          root.currentPollRate = state.poll_rate
+          root.currentBrightness = state.brightness
+          root.currentEffect = state.effect
+          root.currentEffectColor = state.effect_color
+        }
         root.allProfiles = state.profiles
 
         if (root.initialPollDone) {
@@ -292,7 +315,7 @@ Panel {
             iconComponent: Component {
               Text {
                 text: "󰍽"
-                color: root.deviceConnected ? (root.currentEffectColor || Color.accent) : Qt.darker(root.foreground, 1.5)
+                color: (root.deviceConnected && root.currentEffect !== "off" && root.currentBrightness > 0) ? (root.currentEffectColor || Color.accent) : Qt.darker(root.foreground, 1.5)
                 font.family: root.fontFamily
                 font.pixelSize: Style.font.display
               }
@@ -682,31 +705,34 @@ Panel {
               onChanged: function(val) { root.applyEffect(val, root.currentEffectColor) }
             }
 
-            // Paleta de colores rápidos (visible para estático y respiración)
+            // Paleta de colores rápidos (visible siempre excepto cuando está apagado)
             RowLayout {
               width: parent.width
-              spacing: Style.space(8)
-              visible: root.currentEffect === "static" || root.currentEffect === "breathing"
+              spacing: Style.space(6)
+              visible: root.currentEffect !== "off"
 
               Repeater {
-                model: ["#00FF66", "#00FFFF", "#0088FF", "#8800FF", "#FF0055", "#FFFFFF"]
+                model: ["#00FF00", "#00FFFF", "#0066FF", "#9900FF", "#FF0000", "#FF6600", "#FFFF00", "#FFFFFF"]
                 Rectangle {
                   id: colorSwatch
                   Layout.fillWidth: true
-                  implicitHeight: Style.space(24)
+                  implicitHeight: Style.space(26)
                   radius: Style.space(4)
                   readonly property string swatchHex: modelData
-                  readonly property bool isSelected: root.currentEffectColor.toUpperCase() === swatchHex.toUpperCase()
+                  readonly property bool isSelected: (root.currentEffect === "static" || root.currentEffect === "breathing") && root.currentEffectColor.toUpperCase() === swatchHex.toUpperCase()
 
                   color: swatchHex
-                  border.color: isSelected ? root.foreground : "transparent"
-                  border.width: isSelected ? 2 : 0
+                  border.color: isSelected ? root.foreground : Qt.rgba(0, 0, 0, 0.45)
+                  border.width: isSelected ? 2 : 1
 
                   MouseArea {
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: root.applyEffect(root.currentEffect, colorSwatch.swatchHex)
+                    onClicked: {
+                      var eff = (root.currentEffect === "breathing") ? "breathing" : "static"
+                      root.applyEffect(eff, colorSwatch.swatchHex)
+                    }
                   }
                 }
               }

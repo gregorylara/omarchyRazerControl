@@ -19,14 +19,14 @@
       "poll_rate": 1000,
       "brightness": 100,
       "effect": "spectrum",
-      "effect_color": "#00FF66"
+      "effect_color": "#00FF00"
     },
     {
       "id": "onboard-2",
       "name": "Profile 2 (FPS Ultra / Red)",
       "isOnboard": true,
       "onboardSlot": 2,
-      "badgeColor": "#FF2A55",
+      "badgeColor": "#FF0000",
       "dpi": 800,
       "dpi_stages": [
         400,
@@ -39,14 +39,14 @@
       "poll_rate": 8000,
       "brightness": 100,
       "effect": "static",
-      "effect_color": "#FF2A55"
+      "effect_color": "#FF0000"
     },
     {
       "id": "onboard-3",
       "name": "Profile 3 (MOBA / Green)",
       "isOnboard": true,
       "onboardSlot": 3,
-      "badgeColor": "#00FF66",
+      "badgeColor": "#00FF00",
       "dpi": 1200,
       "dpi_stages": [
         600,
@@ -59,14 +59,14 @@
       "poll_rate": 1000,
       "brightness": 80,
       "effect": "breathing",
-      "effect_color": "#00FF66"
+      "effect_color": "#00FF00"
     },
     {
       "id": "onboard-4",
       "name": "Profile 4 (Productivity / Blue)",
       "isOnboard": true,
       "onboardSlot": 4,
-      "badgeColor": "#00A8FF",
+      "badgeColor": "#0066FF",
       "dpi": 1800,
       "dpi_stages": [
         800,
@@ -79,7 +79,7 @@
       "poll_rate": 1000,
       "brightness": 50,
       "effect": "static",
-      "effect_color": "#00A8FF"
+      "effect_color": "#0066FF"
     },
     {
       "id": "onboard-5",

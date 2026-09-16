@@ -47,49 +47,49 @@ DEFAULT_PROFILES_DATA = {
             "poll_rate": 1000,
             "brightness": 100,
             "effect": "spectrum",
-            "effect_color": "#00FF66"
+            "effect_color": "#00FF00"
         },
         {
             "id": "onboard-2",
             "name": "Profile 2 (FPS Ultra / Red)",
             "isOnboard": True,
             "onboardSlot": 2,
-            "badgeColor": "#FF2A55",
+            "badgeColor": "#FF0000",
             "dpi": 800,
             "dpi_stages": [400, 800, 1200, 1600, 2400],
             "active_stage": 2,
             "poll_rate": 8000,
             "brightness": 100,
             "effect": "static",
-            "effect_color": "#FF2A55"
+            "effect_color": "#FF0000"
         },
         {
             "id": "onboard-3",
             "name": "Profile 3 (MOBA / Green)",
             "isOnboard": True,
             "onboardSlot": 3,
-            "badgeColor": "#00FF66",
+            "badgeColor": "#00FF00",
             "dpi": 1200,
             "dpi_stages": [600, 1200, 1800, 2400, 3200],
             "active_stage": 2,
             "poll_rate": 1000,
             "brightness": 80,
             "effect": "breathing",
-            "effect_color": "#00FF66"
+            "effect_color": "#00FF00"
         },
         {
             "id": "onboard-4",
             "name": "Profile 4 (Productivity / Blue)",
             "isOnboard": True,
             "onboardSlot": 4,
-            "badgeColor": "#00A8FF",
+            "badgeColor": "#0066FF",
             "dpi": 1800,
             "dpi_stages": [800, 1200, 1800, 2400, 3600],
             "active_stage": 3,
             "poll_rate": 1000,
             "brightness": 50,
             "effect": "static",
-            "effect_color": "#00A8FF"
+            "effect_color": "#0066FF"
         },
         {
             "id": "onboard-5",
@@ -216,6 +216,10 @@ class RazerDeviceManager:
             return False
         try:
             self.fd = os.open(self.hidraw_path, os.O_RDWR)
+            try:
+                fcntl.flock(self.fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except (BlockingIOError, OSError):
+                fcntl.flock(self.fd, fcntl.LOCK_EX)
             return True
         except Exception:
             self.fd = None
@@ -223,6 +227,10 @@ class RazerDeviceManager:
 
     def close_device(self):
         if self.fd is not None:
+            try:
+                fcntl.flock(self.fd, fcntl.LOCK_UN)
+            except Exception:
+                pass
             try:
                 os.close(self.fd)
             except Exception:
@@ -354,7 +362,7 @@ class RazerDeviceManager:
         return self.send_recv_report(0x0f, 0x04, 3, args)
 
     def hw_set_effect(self, effect, hex_color="#00FF66"):
-        """Set lighting effect: static, spectrum, breathing, off."""
+        """Set lighting effect: static, spectrum, breathing, off matching OpenRazer extended matrix."""
         # Convert hex to RGB
         hex_clean = hex_color.lstrip("#")
         if len(hex_clean) == 6:
@@ -363,19 +371,19 @@ class RazerDeviceManager:
             r, g, b = (0, 255, 102)
 
         if effect == "off":
-            # None effect: 0x0f, 0x02, arg = [0x01, 0x04, 0x00]
-            args = struct.pack(">BBB", 0x01, 0x04, 0x00)
-            return self.send_recv_report(0x0f, 0x02, 3, args)
+            # razer_chroma_extended_matrix_effect_none: 0x0f, 0x02, size 6: [0x01, 0x04, 0x00, 0x00, 0x00, 0x00]
+            args = struct.pack(">BBBBBB", 0x01, 0x04, 0x00, 0x00, 0x00, 0x00)
+            return self.send_recv_report(0x0f, 0x02, 6, args)
         elif effect == "spectrum":
-            # Spectrum cycling: 0x0f, 0x02, arg = [0x01, 0x04, 0x03]
-            args = struct.pack(">BBB", 0x01, 0x04, 0x03)
-            return self.send_recv_report(0x0f, 0x02, 3, args)
+            # razer_chroma_extended_matrix_effect_spectrum: 0x0f, 0x02, size 6: [0x01, 0x04, 0x03, 0x00, 0x00, 0x00]
+            args = struct.pack(">BBBBBB", 0x01, 0x04, 0x03, 0x00, 0x00, 0x00)
+            return self.send_recv_report(0x0f, 0x02, 6, args)
         elif effect == "breathing":
-            # Breathing single color: 0x0f, 0x02, arg = [0x01, 0x04, 0x02, 0x01, r, g, b]
-            args = struct.pack(">BBBBBBB", 0x01, 0x04, 0x02, 0x01, r, g, b)
-            return self.send_recv_report(0x0f, 0x02, 7, args)
+            # razer_chroma_extended_matrix_effect_breathing_single: 0x0f, 0x02, size 9: [0x01, 0x04, 0x02, 0x01, 0x00, 0x01, r, g, b]
+            args = struct.pack(">BBBBBBBBB", 0x01, 0x04, 0x02, 0x01, 0x00, 0x01, r, g, b)
+            return self.send_recv_report(0x0f, 0x02, 9, args)
         else:
-            # Static: 0x0f, 0x02, arg = [0x01, 0x04, 0x01, 0x00, 0x00, 0x01, r, g, b]
+            # razer_chroma_extended_matrix_effect_static: 0x0f, 0x02, size 9: [0x01, 0x04, 0x01, 0x00, 0x00, 0x01, r, g, b]
             args = struct.pack(">BBBBBBBBB", 0x01, 0x04, 0x01, 0x00, 0x00, 0x01, r, g, b)
             return self.send_recv_report(0x0f, 0x02, 9, args)
 
@@ -459,6 +467,7 @@ def get_current_state():
 
 def apply_profile(profile_data):
     """Send profile configuration to Razer hardware."""
+    import time
     mgr = RazerDeviceManager()
     slot = profile_data.get("onboardSlot", 0)
     dpi = profile_data.get("dpi", 1600)
@@ -471,11 +480,14 @@ def apply_profile(profile_data):
 
     if mgr.has_permission:
         try:
-            # Set DPI and stages
             mgr.hw_set_dpi(dpi, dpi, slot)
+            time.sleep(0.015)
             mgr.hw_set_dpi_stages(stages, active_stage, slot)
+            time.sleep(0.015)
             mgr.hw_set_polling_rate(poll_rate, slot)
+            time.sleep(0.015)
             mgr.hw_set_brightness(brightness)
+            time.sleep(0.015)
             mgr.hw_set_effect(effect, effect_color)
         except Exception:
             pass
@@ -484,6 +496,7 @@ def apply_profile(profile_data):
 
 
 def main():
+    import time
     parser = argparse.ArgumentParser(description="Omarchy Razer Device Controller")
     sub = parser.add_subparsers(dest="cmd")
 
@@ -549,14 +562,20 @@ def main():
     if not active_prof and data["profiles"]:
         active_prof = data["profiles"][0]
 
+    slot = active_prof.get("onboardSlot", 0)
+
     if args.cmd == "set-dpi":
         val = max(100, min(30000, args.dpi))
         active_prof["dpi"] = val
-        # Check if matches one of the stages
         if val in active_prof.get("dpi_stages", []):
             active_prof["active_stage"] = active_prof["dpi_stages"].index(val) + 1
         ProfileStorage.save(data)
-        apply_profile(active_prof)
+        mgr = RazerDeviceManager()
+        if mgr.has_permission:
+            try:
+                mgr.hw_set_dpi(val, args.y if args.y else val, slot)
+            finally:
+                mgr.close_device()
         print(f"DPI updated to {val}")
 
     elif args.cmd == "set-stage":
@@ -565,27 +584,56 @@ def main():
         active_prof["active_stage"] = stage_idx
         active_prof["dpi"] = val
         ProfileStorage.save(data)
-        apply_profile(active_prof)
+        mgr = RazerDeviceManager()
+        if mgr.has_permission:
+            try:
+                mgr.hw_set_dpi(val, val, slot)
+                time.sleep(0.015)
+                mgr.hw_set_dpi_stages(active_prof["dpi_stages"], stage_idx, slot)
+            finally:
+                mgr.close_device()
         print(f"DPI stage switched to {stage_idx} ({val} DPI)")
 
     elif args.cmd == "set-poll-rate":
         active_prof["poll_rate"] = args.rate
         ProfileStorage.save(data)
-        apply_profile(active_prof)
+        mgr = RazerDeviceManager()
+        if mgr.has_permission:
+            try:
+                mgr.hw_set_polling_rate(args.rate, slot)
+            finally:
+                mgr.close_device()
         print(f"Polling rate set to {args.rate} Hz")
 
     elif args.cmd == "set-brightness":
         b = max(0, min(100, args.brightness))
         active_prof["brightness"] = b
         ProfileStorage.save(data)
-        apply_profile(active_prof)
+        mgr = RazerDeviceManager()
+        if mgr.has_permission:
+            try:
+                mgr.hw_set_brightness(b)
+            finally:
+                mgr.close_device()
         print(f"Brightness set to {b}%")
 
     elif args.cmd == "set-effect":
         active_prof["effect"] = args.effect
         active_prof["effect_color"] = args.color
+        restore_bright = False
+        if active_prof.get("brightness", 100) == 0 and args.effect != "off":
+            active_prof["brightness"] = 100
+            restore_bright = True
         ProfileStorage.save(data)
-        apply_profile(active_prof)
+        mgr = RazerDeviceManager()
+        if mgr.has_permission:
+            try:
+                if restore_bright:
+                    mgr.hw_set_brightness(100)
+                    time.sleep(0.015)
+                mgr.hw_set_effect(args.effect, args.color)
+            finally:
+                mgr.close_device()
         print(f"Effect set to {args.effect} ({args.color})")
 
     elif args.cmd == "profile":
@@ -613,11 +661,11 @@ def main():
             else:
                 print(f"Profile '{target}' not found")
         elif args.profile_action == "save":
-            slot = args.slot if args.slot else active_prof.get("onboardSlot", 1)
-            active_prof["onboardSlot"] = slot
+            slot_target = args.slot if args.slot else active_prof.get("onboardSlot", 1)
+            active_prof["onboardSlot"] = slot_target
             ProfileStorage.save(data)
             apply_profile(active_prof)
-            print(f"Settings burned into On-Board Memory Slot {slot}")
+            print(f"Settings burned into On-Board Memory Slot {slot_target}")
 
 if __name__ == "__main__":
     main()

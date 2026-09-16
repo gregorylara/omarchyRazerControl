@@ -47,7 +47,7 @@ function parseOutput(rawText) {
       result.poll_rate = Number(data.poll_rate) || 1000;
       result.brightness = Number(data.brightness) || 100;
       result.effect = data.effect || "spectrum";
-      result.effect_color = data.effect_color || "#00FF66";
+      result.effect_color = data.effect_color || "#00FF00";
       result.profiles = Array.isArray(data.profiles) ? data.profiles : [];
     }
   } catch (e) {
@@ -60,11 +60,11 @@ function parseOutput(rawText) {
 function badgeColorForSlot(slot) {
   switch (Number(slot)) {
     case 1: return "#FFFFFF";
-    case 2: return "#FF2A55";
-    case 3: return "#00FF66";
-    case 4: return "#00A8FF";
+    case 2: return "#FF0000";
+    case 3: return "#00FF00";
+    case 4: return "#0066FF";
     case 5: return "#00FFFF";
-    default: return "#00FF66";
+    default: return "#00FF00";
   }
 }
 
