@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "id": "oma.razer",
+  "name": "Oma Razer",
+  "version": "1.0.0",
+  "author": "Gregory Lara",
+  "license": "MIT",
+  "description": "Razer mouse status and hardware controls (DPI stages, polling rate up to 8000Hz, Chroma RGB, and on-board profiles)",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "Panel.qml"
+  },
+  "barWidget": {
+    "displayName": "Razer",
+    "description": "Razer mouse control with live DPI, polling rate, Chroma lighting, and on-board memory profiles",
+    "category": "Hardware",
+    "aliases": [
+      "razer",
+      "viper",
+      "mouse",
+      "oma.razercontrol"
+    ],
+    "allowMultiple": false,
+    "defaultSection": "right",
+    "defaults": {
+      "showDpiInBar": true,
+      "onlyWhenConnected": false,
+      "notifyOnConnect": true
+    },
+    "schema": [
+      {
+        "key": "showDpiInBar",
+        "type": "boolean",
+        "label": "Show DPI value in the bar",
+        "description": "Display current numeric DPI next to the mouse icon in the bar",
+        "defaultValue": true
+      },
+      {
+        "key": "onlyWhenConnected",
+        "type": "boolean",
+        "label": "Show in bar only when connected",
+        "description": "Hide the bar widget automatically when the Razer mouse is disconnected",
+        "defaultValue": false
+      },
+      {
+        "key": "notifyOnConnect",
+        "type": "boolean",
+        "label": "Notify on mouse connection",
+        "description": "Send a desktop notification whenever a Razer mouse is connected",
+        "defaultValue": true
+      }
+    ]
+  }
+}

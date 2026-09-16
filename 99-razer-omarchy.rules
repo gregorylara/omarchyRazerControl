@@ -1,0 +1,5 @@
+# Omarchy udev rules for Razer gaming peripherals
+# Grants regular logged-in users direct access to configure DPI, polling rate, Chroma RGB, and on-board profiles.
+
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="1532", MODE="0660", GROUP="input", TAG+="uaccess"
+KERNEL=="hidraw*", ATTRS{idVendor}=="1532", MODE="0660", GROUP="input", TAG+="uaccess"
