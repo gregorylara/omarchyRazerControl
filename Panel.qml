@@ -284,7 +284,7 @@ Panel {
             width: parent.width
             title: root.deviceName
             meta: root.deviceConnected ? (root.currentDpi + " DPI • " + Model.pollRateLabel(root.currentPollRate)) : "Dispositivo no detectado"
-            detail: root.deviceConnected ? (root.hasPermission ? "Comunicación HID activa • Memoria On-Board" : "Requiere permisos udev") : "Conecta tu ratón Razer por USB"
+            detail: root.deviceConnected ? (root.hasPermission ? "On-Board" : "Permisos udev") : "Desconectado"
             foreground: root.foreground
             fontFamily: root.fontFamily
             iconOpacity: root.deviceConnected ? 1.0 : 0.4
