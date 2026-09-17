@@ -39,6 +39,7 @@ Communicate directly with the mouse's internal hardware controller over native L
   - Calibrated pure optical RGB color palette (Razer Green `#00FF00`, Cyan `#00FFFF`, Cobalt Blue `#0066FF`, Purple `#9900FF`, Pure Red `#FF0000`, Amber Orange `#FF6600`, Bright Yellow `#FFFF00`, Crisp White `#FFFFFF`).
 - 🚀 **Zero Daemon Overhead**: Talks directly to the hardware using standard 90-byte Razer USB HID feature reports with CRC verification.
 - 🎨 **Adaptive Theme**: Automatically matches your active Omarchy color scheme, border radius, and typography.
+- 🌐 **Bilingual Interface (i18n)**: English by default, with full Spanish translation support (auto-detected from system locale or configurable).
 - 🔌 **Full IPC API**: Control any parameter from terminal scripts or Hyprland/Sway keybindings.
 
 ---
@@ -81,7 +82,7 @@ cd ~/.config/omarchy/plugins/oma.razer
 ./setup.sh
 ```
 
-*(Alternatively, click the **"Activar"** button on the permissions banner directly inside the plugin popup).*
+*(Alternatively, click the **"Enable"** (or **"Activar"**) button on the permissions banner directly inside the plugin popup).*
 
 This copies `99-razer-omarchy.rules` to `/etc/udev/rules.d/` and grants read/write permissions to the `input` group.
 
@@ -135,7 +136,8 @@ Customize settings in `~/.config/omarchy/shell.json` under your bar configuratio
   "id": "oma.razer",
   "showDpiInBar": true,
   "onlyWhenConnected": false,
-  "notifyOnConnect": true
+  "notifyOnConnect": true,
+  "language": "en"
 }
 ```
 
@@ -144,6 +146,7 @@ Customize settings in `~/.config/omarchy/shell.json` under your bar configuratio
 | `showDpiInBar` | `boolean` | `true` | Display current DPI next to the mouse icon in the bar |
 | `onlyWhenConnected` | `boolean` | `false` | Automatically hide the widget when mouse is disconnected |
 | `notifyOnConnect` | `boolean` | `true` | Send a desktop notification when mouse is plugged in |
+| `language` | `string` | `"en"` | Interface language: `"en"` (default), `"es"`, or `"auto"` (system locale) |
 
 ---
 

@@ -75,12 +75,80 @@ function pollRateLabel(rate) {
   return rate + " Hz";
 }
 
-function effectLabel(eff) {
+var translations = {
+  en: {
+    disconnected: "(disconnected)",
+    razerMouse: "Razer Mouse",
+    razerMouseDetected: "Razer mouse detected",
+    deviceNotDetected: "No device detected",
+    onboardStatus: "On-Board",
+    udevPermissionsStatus: "udev Permissions",
+    disconnectedStatus: "Disconnected",
+    udevRequiredTitle: "udev permissions required",
+    udevRequiredDesc: "To apply hardware changes to the mouse, install the user access rule.",
+    activateBtn: "Enable",
+    onboardProfilesTitle: "ON-BOARD MEMORY PROFILES",
+    saveToMouseBtn: "Save to mouse",
+    sensitivityTitle: "SENSITIVITY (DPI)",
+    stageLabel: "Stage",
+    pollingRateTitle: "POLLING RATE",
+    chromaLightingTitle: "CHROMA RGB LIGHTING",
+    effectSpectrum: "Spectrum",
+    effectStatic: "Static",
+    effectBreathing: "Breathing",
+    effectOff: "Off"
+  },
+  es: {
+    disconnected: "(desconectado)",
+    razerMouse: "Ratón Razer",
+    razerMouseDetected: "Ratón Razer detectado",
+    deviceNotDetected: "Dispositivo no detectado",
+    onboardStatus: "On-Board",
+    udevPermissionsStatus: "Permisos udev",
+    disconnectedStatus: "Desconectado",
+    udevRequiredTitle: "Permisos udev requeridos",
+    udevRequiredDesc: "Para aplicar cambios de hardware al ratón, instala la regla de acceso de usuario.",
+    activateBtn: "Activar",
+    onboardProfilesTitle: "PERFILES EN MEMORIA (ON-BOARD)",
+    saveToMouseBtn: "Guardar en ratón",
+    sensitivityTitle: "SENSIBILIDAD (DPI)",
+    stageLabel: "Etapa",
+    pollingRateTitle: "TASA DE SONDEO (POLLING RATE)",
+    chromaLightingTitle: "ILUMINACIÓN CHROMA RGB",
+    effectSpectrum: "Espectro",
+    effectStatic: "Estático",
+    effectBreathing: "Respiración",
+    effectOff: "Off"
+  }
+};
+
+function t(key, lang) {
+  var l = (lang === "es") ? "es" : "en";
+  if (translations[l] && translations[l][key] !== undefined) {
+    return translations[l][key];
+  }
+  if (translations["en"] && translations["en"][key] !== undefined) {
+    return translations["en"][key];
+  }
+  return key;
+}
+
+function effectOptions(lang) {
+  return [
+    { value: "spectrum", label: t("effectSpectrum", lang) },
+    { value: "static", label: t("effectStatic", lang) },
+    { value: "breathing", label: t("effectBreathing", lang) },
+    { value: "off", label: t("effectOff", lang) }
+  ];
+}
+
+function effectLabel(eff, lang) {
+  var l = (lang === "es") ? "es" : "en";
   switch (eff) {
-    case "static": return "Estático";
-    case "spectrum": return "Ciclo Espectro";
-    case "breathing": return "Respiración";
-    case "off": return "Apagado";
+    case "static": return t("effectStatic", l);
+    case "spectrum": return l === "es" ? "Ciclo Espectro" : "Spectrum Cycling";
+    case "breathing": return t("effectBreathing", l);
+    case "off": return l === "es" ? "Apagado" : "Off";
     default: return eff;
   }
 }

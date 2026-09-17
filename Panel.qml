@@ -24,6 +24,19 @@ Panel {
   readonly property bool showDpiInBar: setting("showDpiInBar", true) !== false
   readonly property bool onlyWhenConnected: setting("onlyWhenConnected", false) !== false
   readonly property bool notifyOnConnect: setting("notifyOnConnect", true) !== false
+  readonly property string languageSetting: setting("language", "en")
+  readonly property string currentLang: {
+    var l = (root.languageSetting || "en").toLowerCase()
+    if (l === "auto") {
+      var sys = Qt.locale().name.toLowerCase()
+      return sys.startsWith("es") ? "es" : "en"
+    }
+    return (l === "es") ? "es" : "en"
+  }
+
+  function t(key) {
+    return Model.t(key, root.currentLang)
+  }
 
   // Device state
   property bool deviceConnected: false
@@ -64,14 +77,14 @@ Panel {
 
   function sendConnectionNotification(name, dpi, pollRate) {
     if (!root.notifyOnConnect) return
-    var desc = name || "Ratón Razer"
+    var desc = name || root.t("razerMouse")
     desc += " • " + dpi + " DPI @ " + pollRate + " Hz"
     Quickshell.execDetached([
       "omarchy-notification-send",
       "--app-name", "oma.razer",
       "-g", "󰍽",
       "-t", "4000",
-      "Ratón Razer detectado",
+      root.t("razerMouseDetected"),
       desc,
       "--exec", "omarchy-shell", "oma.razer", "open"
     ])
@@ -253,7 +266,7 @@ Panel {
       return "󰍽"
     }
     slotSize: Style.bar.iconSlot * (root.showDpiInBar && root.deviceConnected && !vertical ? 2.0 : 1.0)
-    tooltipText: root.deviceName + (root.deviceConnected ? (" (" + root.currentDpi + " DPI @ " + root.currentPollRate + " Hz)") : " (desconectado)")
+    tooltipText: root.deviceName + (root.deviceConnected ? (" (" + root.currentDpi + " DPI @ " + root.currentPollRate + " Hz)") : (" " + root.t("disconnected")))
     active: root.deviceConnected
     onPressed: function(b) {
       if (b === Qt.RightButton) {
@@ -306,8 +319,8 @@ Panel {
             id: hero
             width: parent.width
             title: root.deviceName
-            meta: root.deviceConnected ? (root.currentDpi + " DPI • " + Model.pollRateLabel(root.currentPollRate)) : "Dispositivo no detectado"
-            detail: root.deviceConnected ? (root.hasPermission ? "On-Board" : "Permisos udev") : "Desconectado"
+            meta: root.deviceConnected ? (root.currentDpi + " DPI • " + Model.pollRateLabel(root.currentPollRate)) : root.t("deviceNotDetected")
+            detail: root.deviceConnected ? (root.hasPermission ? root.t("onboardStatus") : root.t("udevPermissionsStatus")) : root.t("disconnectedStatus")
             foreground: root.foreground
             fontFamily: root.fontFamily
             iconOpacity: root.deviceConnected ? 1.0 : 0.4
@@ -374,14 +387,14 @@ Panel {
                 spacing: Style.space(2)
 
                 Text {
-                  text: "Permisos udev requeridos"
+                  text: root.t("udevRequiredTitle")
                   font.family: root.fontFamily
                   font.pixelSize: Style.font.body
                   font.bold: true
                   color: "#FFAAAA"
                 }
                 Text {
-                  text: "Para aplicar cambios de hardware al ratón, instala la regla de acceso de usuario."
+                  text: root.t("udevRequiredDesc")
                   font.family: root.fontFamily
                   font.pixelSize: Style.font.caption
                   color: Qt.darker(root.foreground, 1.2)
@@ -399,7 +412,7 @@ Panel {
                 Text {
                   id: fixText
                   anchors.centerIn: parent
-                  text: "Activar"
+                  text: root.t("activateBtn")
                   font.family: root.fontFamily
                   font.pixelSize: Style.font.caption
                   font.bold: true
@@ -430,7 +443,7 @@ Panel {
             RowLayout {
               width: parent.width
               PanelSectionHeader {
-                text: "PERFILES EN MEMORIA (ON-BOARD)"
+                text: root.t("onboardProfilesTitle")
                 foreground: root.foreground
               }
               Item {
@@ -457,7 +470,7 @@ Panel {
                     color: Color.accent
                   }
                   Text {
-                    text: "Guardar en ratón"
+                    text: root.t("saveToMouseBtn")
                     font.family: root.fontFamily
                     font.pixelSize: Style.font.caption - 1
                     color: root.foreground
@@ -538,7 +551,7 @@ Panel {
             RowLayout {
               width: parent.width
               PanelSectionHeader {
-                text: "SENSIBILIDAD (DPI)"
+                text: root.t("sensitivityTitle")
                 foreground: root.foreground
               }
               Item {
@@ -547,7 +560,7 @@ Panel {
               }
               Text {
                 id: dpiValText
-                text: root.currentDpi + " DPI (Etapa " + root.currentActiveStage + "/5)"
+                text: root.currentDpi + " DPI (" + root.t("stageLabel") + " " + root.currentActiveStage + "/5)"
                 font.family: root.fontFamily
                 font.pixelSize: Style.font.caption
                 color: Color.accent
@@ -622,7 +635,7 @@ Panel {
             RowLayout {
               width: parent.width
               PanelSectionHeader {
-                text: "TASA DE SONDEO (POLLING RATE)"
+                text: root.t("pollingRateTitle")
                 foreground: root.foreground
               }
               Item {
@@ -661,7 +674,7 @@ Panel {
             RowLayout {
               width: parent.width
               PanelSectionHeader {
-                text: "ILUMINACIÓN CHROMA RGB"
+                text: root.t("chromaLightingTitle")
                 foreground: root.foreground
               }
               Item {
@@ -693,12 +706,7 @@ Panel {
 
             // Efectos
             ButtonGroup {
-              options: [
-                { value: "spectrum", label: "Espectro" },
-                { value: "static", label: "Estático" },
-                { value: "breathing", label: "Respiración" },
-                { value: "off", label: "Off" }
-              ]
+              options: Model.effectOptions(root.currentLang)
               value: root.currentEffect
               fontFamily: root.fontFamily
               foreground: root.foreground
