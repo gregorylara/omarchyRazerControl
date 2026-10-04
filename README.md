@@ -35,6 +35,7 @@ Communicate directly with the mouse's internal hardware controller over native L
 - 🎯 **5-Stage DPI Presets & Precision Slider**: Instant stage selection (e.g. 400, 800, 1600, 3200, 6400) or continuous fine-tuning from 100 to 30,000 DPI in steps of 50.
 - 🌈 **Chroma RGB Lighting**:
   - Multiple modes: **Static**, **Spectrum Cycling**, **Breathing**, and **Off**.
+  - **Lighting zones**: on multi-zone mice (e.g. Basilisk V3: Logo, Scroll Wheel, Underglow) drive every zone together or each one separately. Zones are detected from the device (logo, scroll, underglow, left/right side strips, backlight); logo-only mice behave as before.
   - Smooth brightness slider (0–100%).
   - Calibrated pure optical RGB color palette (Razer Green `#00FF00`, Cyan `#00FFFF`, Cobalt Blue `#0066FF`, Purple `#9900FF`, Pure Red `#FF0000`, Amber Orange `#FF6600`, Bright Yellow `#FFFF00`, Crisp White `#FFFFFF`).
 - 🚀 **Zero Daemon Overhead**: Talks directly to the hardware using standard 90-byte Razer USB HID feature reports with CRC verification.
@@ -104,9 +105,14 @@ omarchy-shell oma.razer dpi 1600             # Set sensor DPI to 1600
 omarchy-shell oma.razer stage 3              # Activate DPI Stage 3
 omarchy-shell oma.razer poll 8000            # Set polling rate to 8000 Hz
 omarchy-shell oma.razer profile 2            # Switch to On-Board Profile 2 (Red)
-omarchy-shell oma.razer brightness 100       # Set LED brightness to 100%
-omarchy-shell oma.razer effect static        # Lighting: static, spectrum, breathing, off
-omarchy-shell oma.razer color "#00FF00"      # Apply hex color to current effect
+omarchy-shell oma.razer brightness 100       # Set LED brightness to 100% (all zones)
+omarchy-shell oma.razer effect static        # Lighting: static, spectrum, breathing, off (all zones)
+omarchy-shell oma.razer color "#00FF00"      # Apply hex color to current effect (all zones)
+
+# Single lighting zone: logo, scroll, underglow, left, right, backlight
+omarchy-shell oma.razer zoneBrightness underglow 40
+omarchy-shell oma.razer zoneEffect scroll spectrum
+omarchy-shell oma.razer zoneColor logo "#FF0000"
 ```
 
 ---
@@ -120,7 +126,9 @@ The included backend script can also be executed independently outside the deskt
 ./razer_ctl.py set-dpi 1600                  # Adjust DPI
 ./razer_ctl.py set-stage 2                   # Switch DPI stage
 ./razer_ctl.py set-poll-rate 8000            # Set polling rate in Hz
-./razer_ctl.py set-effect static --color "#00FF00" # Static Razer Green
+./razer_ctl.py set-effect static --color "#00FF00" # Static Razer Green (all zones)
+./razer_ctl.py set-effect static --color "#FF0000" --zone underglow # One zone only
+./razer_ctl.py set-brightness 50 --zone logo # Zone brightness (all, logo, scroll, underglow, left, right, backlight)
 ./razer_ctl.py profile switch 1              # Switch on-board slot
 ./razer_ctl.py profile save --slot 1         # Burn current settings into slot
 ```

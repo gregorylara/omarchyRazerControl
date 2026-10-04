@@ -18,6 +18,8 @@ function parseOutput(rawText) {
     brightness: 100,
     effect: "spectrum",
     effect_color: "#00FF66",
+    lighting_zones: ["logo"],
+    zones: {},
     profiles: []
   };
 
@@ -45,9 +47,11 @@ function parseOutput(rawText) {
       result.dpi_stages = Array.isArray(data.dpi_stages) ? data.dpi_stages : [400, 800, 1600, 3200, 6400];
       result.active_stage = Number(data.active_stage) || 3;
       result.poll_rate = Number(data.poll_rate) || 1000;
-      result.brightness = Number(data.brightness) || 100;
+      result.brightness = (data.brightness !== undefined) ? Number(data.brightness) : 100;
       result.effect = data.effect || "spectrum";
       result.effect_color = data.effect_color || "#00FF00";
+      result.lighting_zones = (Array.isArray(data.lighting_zones) && data.lighting_zones.length) ? data.lighting_zones : ["logo"];
+      result.zones = (data.zones && typeof data.zones === "object") ? data.zones : {};
       result.profiles = Array.isArray(data.profiles) ? data.profiles : [];
     }
   } catch (e) {
@@ -96,7 +100,15 @@ var translations = {
     effectSpectrum: "Spectrum",
     effectStatic: "Static",
     effectBreathing: "Breathing",
-    effectOff: "Off"
+    effectOff: "Off",
+    zoneAll: "All",
+    zoneLogo: "Logo",
+    zoneScroll: "Scroll",
+    zoneUnderglow: "Underglow",
+    zoneLeft: "Left",
+    zoneRight: "Right",
+    zoneBacklight: "Backlight",
+    lightingMixed: "Mixed"
   },
   es: {
     disconnected: "(desconectado)",
@@ -118,7 +130,15 @@ var translations = {
     effectSpectrum: "Espectro",
     effectStatic: "Estático",
     effectBreathing: "Respiración",
-    effectOff: "Off"
+    effectOff: "Off",
+    zoneAll: "Todo",
+    zoneLogo: "Logo",
+    zoneScroll: "Rueda",
+    zoneUnderglow: "Inferior",
+    zoneLeft: "Izquierda",
+    zoneRight: "Derecha",
+    zoneBacklight: "Retroiluminación",
+    lightingMixed: "Mixto"
   }
 };
 
@@ -140,6 +160,15 @@ function effectOptions(lang) {
     { value: "breathing", label: t("effectBreathing", lang) },
     { value: "off", label: t("effectOff", lang) }
   ];
+}
+
+function zoneOptions(zones, lang) {
+  var keys = { logo: "zoneLogo", scroll: "zoneScroll", underglow: "zoneUnderglow", left: "zoneLeft", right: "zoneRight", backlight: "zoneBacklight" };
+  var options = [{ value: "all", label: t("zoneAll", lang) }];
+  for (var i = 0; i < zones.length; i++) {
+    options.push({ value: zones[i], label: t(keys[zones[i]] || zones[i], lang) });
+  }
+  return options;
 }
 
 function effectLabel(eff, lang) {
