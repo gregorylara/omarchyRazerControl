@@ -56,6 +56,11 @@ Panel {
   property int currentBrightness: 100
   property string currentEffect: "spectrum"
   property string currentEffectColor: "#00FF00"
+  // Lighting zones: "all" holds the profile-wide values, zoneLighting each zone's resolved values
+  property var lightingZones: ["logo"]
+  property var allLighting: ({ brightness: 100, effect: "spectrum", effect_color: "#00FF00" })
+  property var zoneLighting: ({})
+  property string selectedZone: "all"
   property var allProfiles: []
   property bool isPolling: false
   property bool initialPollDone: false
@@ -124,21 +129,64 @@ Panel {
     Quickshell.execDetached([root.scriptPath, "set-poll-rate", String(hz)])
   }
 
-  function applyBrightness(val) {
-    val = Math.max(0, Math.min(100, Math.round(val)))
-    root.lastUserActionTime = Date.now()
-    root.currentBrightness = val
-    Quickshell.execDetached([root.scriptPath, "set-brightness", String(val)])
+  function isZone(zone) {
+    return zone === "all" || root.lightingZones.indexOf(zone) !== -1
   }
 
-  function applyEffect(eff, color) {
-    root.lastUserActionTime = Date.now()
-    root.currentEffect = eff
-    if (color) root.currentEffectColor = color
-    if (eff !== "off" && root.currentBrightness === 0) {
-      root.currentBrightness = 100
+  function lightingFor(zone) {
+    return (zone !== "all" && root.zoneLighting[zone]) ? root.zoneLighting[zone] : root.allLighting
+  }
+
+  // True when the zones no longer share the same value for key (shown as mixed under "All")
+  function zonesDiffer(key) {
+    for (var i = 0; i < root.lightingZones.length; i++) {
+      var z = root.zoneLighting[root.lightingZones[i]]
+      if (z && String(z[key]).toUpperCase() !== String(root.allLighting[key]).toUpperCase()) return true
     }
-    Quickshell.execDetached([root.scriptPath, "set-effect", eff, "--color", root.currentEffectColor])
+    return false
+  }
+
+  function showZone(zone) {
+    root.selectedZone = zone
+    var l = root.lightingFor(zone)
+    root.currentBrightness = l.brightness
+    root.currentEffect = l.effect
+    root.currentEffectColor = l.effect_color
+  }
+
+  function storeLighting(zone, change) {
+    var all = Object.assign({}, root.allLighting)
+    var zones = Object.assign({}, root.zoneLighting)
+    var targets = (zone === "all") ? root.lightingZones : [zone]
+    if (zone === "all") Object.assign(all, change)
+    for (var i = 0; i < targets.length; i++) {
+      zones[targets[i]] = Object.assign({}, zones[targets[i]] || root.allLighting, change)
+    }
+    root.allLighting = all
+    root.zoneLighting = zones
+    root.showZone(root.selectedZone)
+  }
+
+  function applyBrightness(val, zone) {
+    zone = zone || root.selectedZone
+    if (!root.isZone(zone)) return
+    val = Math.max(0, Math.min(100, Math.round(val)))
+    root.lastUserActionTime = Date.now()
+    root.storeLighting(zone, { brightness: val })
+    Quickshell.execDetached([root.scriptPath, "set-brightness", String(val), "--zone", zone])
+  }
+
+  function applyEffect(eff, color, zone) {
+    zone = zone || root.selectedZone
+    if (!root.isZone(zone)) return
+    root.lastUserActionTime = Date.now()
+    var current = root.lightingFor(zone)
+    var change = { effect: eff, effect_color: color || current.effect_color }
+    if (eff !== "off" && current.brightness === 0) {
+      change.brightness = 100
+    }
+    root.storeLighting(zone, change)
+    Quickshell.execDetached([root.scriptPath, "set-effect", eff, "--color", change.effect_color, "--zone", zone])
   }
 
   function switchProfile(target) {
@@ -177,9 +225,30 @@ Panel {
     function stage(val: string): void { root.applyStage(parseInt(val)) }
     function poll(val: string): void { root.applyPollRate(parseInt(val)) }
     function profile(val: string): void { root.switchProfile(val) }
-    function brightness(val: string): void { root.applyBrightness(parseInt(val)) }
-    function effect(val: string): void { root.applyEffect(val, root.currentEffectColor) }
-    function color(val: string): void { root.applyEffect((root.currentEffect === "breathing") ? "breathing" : "static", val) }
+    function brightness(val: string): void { root.applyBrightness(parseInt(val), "all") }
+    function effect(val: string): void { root.applyEffect(val, root.allLighting.effect_color, "all") }
+    function color(val: string): void { root.applyEffect((root.allLighting.effect === "breathing") ? "breathing" : "static", val, "all") }
+    function zoneBrightness(zone: string, val: string): void { root.applyBrightness(parseInt(val), zone) }
+    function zoneEffect(zone: string, val: string): void { root.applyEffect(val, root.lightingFor(zone).effect_color, zone) }
+    function zoneColor(zone: string, val: string): void { root.applyEffect((root.lightingFor(zone).effect === "breathing") ? "breathing" : "static", val, zone) }
+  }
+
+  IpcHandler {
+    target: "oma.razercontrol"
+    function open(): void { root.open() }
+    function close(): void { root.close() }
+    function toggle(): void { root.toggle() }
+    function refresh(): void { root.refresh() }
+    function dpi(val: string): void { root.applyDpi(parseInt(val)) }
+    function stage(val: string): void { root.applyStage(parseInt(val)) }
+    function poll(val: string): void { root.applyPollRate(parseInt(val)) }
+    function profile(val: string): void { root.switchProfile(val) }
+    function brightness(val: string): void { root.applyBrightness(parseInt(val), "all") }
+    function effect(val: string): void { root.applyEffect(val, root.allLighting.effect_color, "all") }
+    function color(val: string): void { root.applyEffect((root.allLighting.effect === "breathing") ? "breathing" : "static", val, "all") }
+    function zoneBrightness(zone: string, val: string): void { root.applyBrightness(parseInt(val), zone) }
+    function zoneEffect(zone: string, val: string): void { root.applyEffect(val, root.lightingFor(zone).effect_color, zone) }
+    function zoneColor(zone: string, val: string): void { root.applyEffect((root.lightingFor(zone).effect === "breathing") ? "breathing" : "static", val, zone) }
   }
 
   Process {
@@ -210,9 +279,10 @@ Panel {
           root.currentDpiStages = state.dpi_stages
           root.currentActiveStage = state.active_stage
           root.currentPollRate = state.poll_rate
-          root.currentBrightness = state.brightness
-          root.currentEffect = state.effect
-          root.currentEffectColor = state.effect_color
+          root.lightingZones = state.lighting_zones
+          root.allLighting = { brightness: state.brightness, effect: state.effect, effect_color: state.effect_color }
+          root.zoneLighting = state.zones
+          root.showZone(root.isZone(root.selectedZone) ? root.selectedZone : "all")
         }
         root.allProfiles = state.profiles
 
@@ -676,12 +746,22 @@ Panel {
               }
               Text {
                 id: brightValText
-                text: root.currentBrightness + "%"
+                text: (root.selectedZone === "all" && root.zonesDiffer("brightness")) ? root.t("lightingMixed") : root.currentBrightness + "%"
                 font.family: root.fontFamily
                 font.pixelSize: Style.font.caption
                 color: Color.accent
                 font.bold: true
               }
+            }
+
+            // Zonas de iluminación (solo en dispositivos con varias zonas)
+            ButtonGroup {
+              visible: root.lightingZones.length > 1
+              options: Model.zoneOptions(root.lightingZones, root.currentLang)
+              value: root.selectedZone
+              fontFamily: root.fontFamily
+              foreground: root.foreground
+              onChanged: function(val) { root.showZone(val) }
             }
 
             // Slider de brillo
@@ -700,7 +780,7 @@ Panel {
             // Efectos
             ButtonGroup {
               options: Model.effectOptions(root.currentLang)
-              value: root.currentEffect
+              value: (root.selectedZone === "all" && root.zonesDiffer("effect")) ? "" : root.currentEffect
               fontFamily: root.fontFamily
               foreground: root.foreground
               onChanged: function(val) { root.applyEffect(val, root.currentEffectColor) }
@@ -710,7 +790,7 @@ Panel {
             RowLayout {
               width: parent.width
               spacing: Style.space(6)
-              visible: root.currentEffect !== "off"
+              visible: root.currentEffect !== "off" || (root.selectedZone === "all" && root.zonesDiffer("effect"))
 
               Repeater {
                 model: ["#00FF00", "#00FFFF", "#0066FF", "#9900FF", "#FF0000", "#FF6600", "#FFFF00", "#FFFFFF"]
@@ -721,6 +801,7 @@ Panel {
                   radius: Style.space(4)
                   readonly property string swatchHex: modelData
                   readonly property bool isSelected: (root.currentEffect === "static" || root.currentEffect === "breathing") && root.currentEffectColor.toUpperCase() === swatchHex.toUpperCase()
+                    && !(root.selectedZone === "all" && (root.zonesDiffer("effect") || root.zonesDiffer("effect_color")))
 
                   color: swatchHex
                   border.color: isSelected ? root.foreground : Qt.rgba(0, 0, 0, 0.45)

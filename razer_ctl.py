@@ -8,6 +8,7 @@ import sys
 import os
 import glob
 import json
+import time
 import struct
 import time
 import fcntl
@@ -23,6 +24,23 @@ TEMPLATE_PROFILES_FILE = SCRIPT_DIR / "profiles.json"
 # Razer USB Vendor ID
 RAZER_VID = 0x1532
 
+# Chroma LED zones (extended matrix LED IDs). Not every device has every zone;
+# the connected device is probed to find which ones answer.
+LED_ZONES = {
+    "logo": 0x04,
+    "scroll": 0x01,
+    "underglow": 0x0A,
+    "left": 0x11,
+    "right": 0x10,
+    "backlight": 0x05,
+}
+ZONE_ORDER = ["logo", "scroll", "underglow", "left", "right", "backlight"]
+# Broadcast LED ID: one command updates every zone and keeps animations in phase
+ALL_LEDS = 0x00
+
+# Razer report status byte
+STATUS_BUSY = 0x01
+STATUS_OK = 0x02
 # Wireless PIDs whose *dongle* interface keeps answering with stale data while
 # the cable is in (the Naga Pro's dongle reports charge_level 0 then). The wired
 # sibling PID is 0x008f; when both are present the wired node wins.
@@ -128,6 +146,7 @@ class RazerDeviceManager:
         self.hidraw_path = None
         self.has_permission = False
         self.fd = None
+        self._led_zones = None
         self._detect_device()
 
     def _detect_device(self):
@@ -381,6 +400,40 @@ class RazerDeviceManager:
             args = struct.pack(">B", code)
             return self.send_recv_report(0x00, 0x05, 1, args)
 
+    def hw_get_led_zones(self):
+        """Return the lighting zones the device answers for, in ZONE_ORDER."""
+        if self._led_zones is not None:
+            return self._led_zones
+        zones = []
+        for zone in ZONE_ORDER:
+            # Extended matrix get brightness: 0x0f, 0x84 [VARSTORE, led, 0]
+            args = struct.pack(">BBB", 0x01, LED_ZONES[zone], 0x00)
+            resp = self.send_recv_report(0x0f, 0x84, 3, args)
+            if resp is not None and resp[0] == STATUS_BUSY:
+                time.sleep(0.02)
+                resp = self.send_recv_report(0x0f, 0x84, 3, args)
+            if resp is not None and resp[0] == STATUS_OK:
+                zones.append(zone)
+        # Devices that do not answer the probe keep the original logo-only behaviour
+        self._led_zones = zones or ["logo"]
+        return self._led_zones
+
+    def _for_zone(self, zone, send):
+        """Run send(led_id) for one zone, or for every zone when zone is 'all'."""
+        if zone != "all":
+            return send(LED_ZONES.get(zone, LED_ZONES["logo"]))
+        zones = self.hw_get_led_zones()
+        if len(zones) == 1:
+            return send(LED_ZONES[zones[0]])
+        resp = send(ALL_LEDS)
+        if resp is not None and resp[0] in (STATUS_OK, STATUS_BUSY):
+            return resp
+        # Device rejected the broadcast ID: address each zone instead
+        for z in zones:
+            resp = send(LED_ZONES[z])
+        return resp
+
+    def hw_set_brightness(self, brightness, zone="logo"):
     def hw_get_battery(self):
         """Battery level, raw 0-255 (razer_chroma_misc_get_battery_level: 0x07/0x80).
 
@@ -402,10 +455,14 @@ class RazerDeviceManager:
     def hw_set_brightness(self, brightness):
         # Brightness 0-100% -> 0-255
         val = int(max(0, min(100, brightness)) * 255 / 100)
-        # Extended matrix brightness: 0x0f, 0x04
-        args = struct.pack(">BBB", 0x01, 0x04, val) # VARSTORE, LOGO_LED, brightness
-        return self.send_recv_report(0x0f, 0x04, 3, args)
+        # Extended matrix brightness: 0x0f, 0x04 [VARSTORE, led, brightness]
+        return self._for_zone(zone, lambda led: self.send_recv_report(0x0f, 0x04, 3, struct.pack(">BBB", 0x01, led, val)))
 
+    def hw_set_effect(self, effect, hex_color="#00FF66", zone="logo"):
+        return self._for_zone(zone, lambda led: self._send_effect(led, effect, hex_color))
+
+    def _send_effect(self, led, effect, hex_color):
+        """Set lighting effect: static, spectrum, breathing, off matching OpenRazer extended matrix."""
     def hw_set_effect(self, effect, hex_color="#00FF66"):
         """Set lighting effect: static, spectrum, breathing, off.
 
@@ -425,6 +482,21 @@ class RazerDeviceManager:
         else:
             r, g, b = (0, 255, 102)
 
+        if effect == "off":
+            # razer_chroma_extended_matrix_effect_none: 0x0f, 0x02, size 6: [0x01, led, 0x00, 0x00, 0x00, 0x00]
+            args = struct.pack(">BBBBBB", 0x01, led, 0x00, 0x00, 0x00, 0x00)
+            return self.send_recv_report(0x0f, 0x02, 6, args)
+        elif effect == "spectrum":
+            # razer_chroma_extended_matrix_effect_spectrum: 0x0f, 0x02, size 6: [0x01, led, 0x03, 0x00, 0x00, 0x00]
+            args = struct.pack(">BBBBBB", 0x01, led, 0x03, 0x00, 0x00, 0x00)
+            return self.send_recv_report(0x0f, 0x02, 6, args)
+        elif effect == "breathing":
+            # razer_chroma_extended_matrix_effect_breathing_single: 0x0f, 0x02, size 9: [0x01, led, 0x02, 0x01, 0x00, 0x01, r, g, b]
+            args = struct.pack(">BBBBBBBBB", 0x01, led, 0x02, 0x01, 0x00, 0x01, r, g, b)
+            return self.send_recv_report(0x0f, 0x02, 9, args)
+        else:
+            # razer_chroma_extended_matrix_effect_static: 0x0f, 0x02, size 9: [0x01, led, 0x01, 0x00, 0x00, 0x01, r, g, b]
+            args = struct.pack(">BBBBBBBBB", 0x01, led, 0x01, 0x00, 0x00, 0x01, r, g, b)
         varstore = 0x01
 
         def report(led_id):
@@ -482,6 +554,31 @@ class ProfileStorage:
             pass
 
 
+def zone_lighting(profile, zone):
+    """Lighting for one zone. Values a zone does not override come from the profile-wide settings."""
+    overrides = profile.get("zones", {}).get(zone, {}) if zone != "all" else {}
+    return {
+        "brightness": overrides.get("brightness", profile.get("brightness", 100)),
+        "effect": overrides.get("effect", profile.get("effect", "spectrum")),
+        "effect_color": overrides.get("effect_color", profile.get("effect_color", "#00FF66")),
+    }
+
+
+def set_zone_lighting(profile, zone, key, value):
+    """Store a lighting value for one zone, or for every zone (clearing their overrides) when zone is 'all'."""
+    zones = profile.setdefault("zones", {})
+    if zone == "all":
+        profile[key] = value
+        for overrides in zones.values():
+            overrides.pop(key, None)
+    else:
+        zones.setdefault(zone, {})[key] = value
+    for z in [z for z, overrides in zones.items() if not overrides]:
+        del zones[z]
+    if not zones:
+        del profile["zones"]
+
+
 def get_current_state():
     mgr = RazerDeviceManager()
     storage = ProfileStorage.load()
@@ -499,11 +596,15 @@ def get_current_state():
 
     # Check hardware query if permitted
     hw_dpi = None
+    lighting_zones = ["logo"]
     if mgr.has_permission:
         try:
             hw_dpi = mgr.hw_get_dpi()
+            lighting_zones = mgr.hw_get_led_zones()
         except Exception:
             pass
+        finally:
+            mgr.close_device()
 
     # Battery: raw 0-255 straight from the device. OpenRazer's own tools scale
     # it with (raw / 255) * 100 (openrazer_daemon mamba.py), so show that.
@@ -536,9 +637,26 @@ def get_current_state():
         "brightness": active.get("brightness", 100) if active else 100,
         "effect": active.get("effect", "spectrum") if active else "spectrum",
         "effect_color": active.get("effect_color", "#00FF66") if active else "#00FF66",
+        "lighting_zones": lighting_zones,
+        "zones": {z: zone_lighting(active or {}, z) for z in lighting_zones},
         "profiles": profiles
     }
     return status
+
+
+def apply_lighting(mgr, profile):
+    """Send a profile's lighting: one broadcast when every zone matches, otherwise zone by zone."""
+    zones = mgr.hw_get_led_zones()
+    shared = zone_lighting(profile, "all")
+    if all(zone_lighting(profile, z) == shared for z in zones):
+        targets = {"all": shared}
+    else:
+        targets = {z: zone_lighting(profile, z) for z in zones}
+    for zone, light in targets.items():
+        mgr.hw_set_brightness(light["brightness"], zone)
+        time.sleep(0.015)
+        mgr.hw_set_effect(light["effect"], light["effect_color"], zone)
+        time.sleep(0.015)
 
 
 def apply_profile(profile_data):
@@ -550,9 +668,6 @@ def apply_profile(profile_data):
     stages = profile_data.get("dpi_stages", [400, 800, 1600, 3200, 6400])
     active_stage = profile_data.get("active_stage", 3)
     poll_rate = profile_data.get("poll_rate", 1000)
-    brightness = profile_data.get("brightness", 100)
-    effect = profile_data.get("effect", "spectrum")
-    effect_color = profile_data.get("effect_color", "#00FF66")
 
     if mgr.has_permission:
         try:
@@ -562,9 +677,7 @@ def apply_profile(profile_data):
             time.sleep(0.015)
             mgr.hw_set_polling_rate(poll_rate, slot)
             time.sleep(0.015)
-            mgr.hw_set_brightness(brightness)
-            time.sleep(0.015)
-            mgr.hw_set_effect(effect, effect_color)
+            apply_lighting(mgr, profile_data)
         except Exception:
             pass
         finally:
@@ -596,11 +709,13 @@ def main():
     # set-brightness
     p_bright = sub.add_parser("set-brightness", help="Set LED brightness (0-100)")
     p_bright.add_argument("brightness", type=int, help="Brightness percentage (0-100)")
+    p_bright.add_argument("--zone", choices=["all"] + ZONE_ORDER, default="all", help="Lighting zone (default: all)")
 
     # set-effect
     p_fx = sub.add_parser("set-effect", help="Set RGB effect")
     p_fx.add_argument("effect", choices=["static", "spectrum", "breathing", "off"], help="Lighting effect")
     p_fx.add_argument("--color", default="#00FF66", help="Hex color code (e.g. #00FF66)")
+    p_fx.add_argument("--zone", choices=["all"] + ZONE_ORDER, default="all", help="Lighting zone (default: all)")
 
     # profile
     p_prof = sub.add_parser("profile", help="Manage profiles")
@@ -641,6 +756,17 @@ def main():
         active_prof = data["profiles"][0]
 
     slot = active_prof.get("onboardSlot", 0)
+
+    if getattr(args, "zone", "all") != "all":
+        mgr = RazerDeviceManager()
+        if mgr.has_permission:
+            try:
+                zones = mgr.hw_get_led_zones()
+            finally:
+                mgr.close_device()
+            if args.zone not in zones:
+                print(f"Zone '{args.zone}' is not available on this device (available: {', '.join(zones)})", file=sys.stderr)
+                sys.exit(1)
 
     if args.cmd == "set-dpi":
         val = max(100, min(30000, args.dpi))
@@ -692,34 +818,38 @@ def main():
 
     elif args.cmd == "set-brightness":
         b = max(0, min(100, args.brightness))
-        active_prof["brightness"] = b
+        set_zone_lighting(active_prof, args.zone, "brightness", b)
         ProfileStorage.save(data)
         mgr = RazerDeviceManager()
         if mgr.has_permission:
             try:
-                mgr.hw_set_brightness(b)
+                mgr.hw_set_brightness(b, args.zone)
             finally:
                 mgr.close_device()
-        print(f"Brightness set to {b}%")
+        print(f"Brightness set to {b}% ({args.zone})")
 
     elif args.cmd == "set-effect":
-        active_prof["effect"] = args.effect
-        active_prof["effect_color"] = args.color
-        restore_bright = False
-        if active_prof.get("brightness", 100) == 0 and args.effect != "off":
-            active_prof["brightness"] = 100
-            restore_bright = True
-        ProfileStorage.save(data)
+        set_zone_lighting(active_prof, args.zone, "effect", args.effect)
+        set_zone_lighting(active_prof, args.zone, "effect_color", args.color)
         mgr = RazerDeviceManager()
+        # Picking an effect turns zones left at 0% brightness back on
+        zones = mgr.hw_get_led_zones() if args.zone == "all" else [args.zone]
+        dark = []
+        if args.effect != "off":
+            dark = [z for z in zones if zone_lighting(active_prof, z)["brightness"] == 0]
+        restore = [args.zone] if dark and dark == zones else dark
+        for z in restore:
+            set_zone_lighting(active_prof, z, "brightness", 100)
+        ProfileStorage.save(data)
         if mgr.has_permission:
             try:
-                if restore_bright:
-                    mgr.hw_set_brightness(100)
+                for z in restore:
+                    mgr.hw_set_brightness(100, z)
                     time.sleep(0.015)
-                mgr.hw_set_effect(args.effect, args.color)
+                mgr.hw_set_effect(args.effect, args.color, args.zone)
             finally:
                 mgr.close_device()
-        print(f"Effect set to {args.effect} ({args.color})")
+        print(f"Effect set to {args.effect} ({args.color}, {args.zone})")
 
     elif args.cmd == "profile":
         if args.profile_action == "switch":
