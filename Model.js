@@ -15,6 +15,8 @@ function parseOutput(rawText) {
     dpi_stages: [400, 800, 1600, 3200, 6400],
     active_stage: 3,
     poll_rate: 1000,
+    battery: -1,
+    charging: false,
     brightness: 100,
     effect: "spectrum",
     effect_color: "#00FF66",
@@ -48,6 +50,9 @@ function parseOutput(rawText) {
       result.active_stage = Number(data.active_stage) || 3;
       result.poll_rate = Number(data.poll_rate) || 1000;
       result.brightness = (data.brightness !== undefined) ? Number(data.brightness) : 100;
+      result.battery = (data.battery === null || data.battery === undefined) ? -1 : Number(data.battery);
+      result.charging = Boolean(data.charging);
+      result.brightness = Number(data.brightness) || 100;
       result.effect = data.effect || "spectrum";
       result.effect_color = data.effect_color || "#00FF00";
       result.lighting_zones = (Array.isArray(data.lighting_zones) && data.lighting_zones.length) ? data.lighting_zones : ["logo"];

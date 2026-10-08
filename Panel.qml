@@ -51,6 +51,8 @@ Panel {
   property var currentDpiStages: [400, 800, 1600, 3200, 6400]
   property int currentActiveStage: 3
   property int currentPollRate: 1000
+  property int batteryLevel: -1
+  property bool charging: false
   property int currentBrightness: 100
   property string currentEffect: "spectrum"
   property string currentEffectColor: "#00FF00"
@@ -265,6 +267,8 @@ Panel {
         root.devicePid = state.pid
         root.supports8k = state.supports_8k
         root.hasPermission = state.has_permission
+        root.batteryLevel = (state.battery === undefined || state.battery === null) ? -1 : state.battery
+        root.charging = state.charging === true
 
         var now = Date.now()
         if (now - root.lastUserActionTime > 2000) {
@@ -316,12 +320,16 @@ Panel {
     visible: root.visible
     text: {
       if (root.showDpiInBar && root.deviceConnected && !vertical) {
-        return "󰍽 " + root.currentDpi
+        var label = "󰍽 " + root.currentDpi
+        if (root.batteryLevel >= 0) {
+          label += " " + root.batteryLevel + "%"
+        }
+        return label
       }
       return "󰍽"
     }
-    slotSize: Style.bar.iconSlot * (root.showDpiInBar && root.deviceConnected && !vertical ? 2.0 : 1.0)
-    tooltipText: root.deviceName + (root.deviceConnected ? (" (" + root.currentDpi + " DPI @ " + root.currentPollRate + " Hz)") : (" " + root.t("disconnected")))
+    slotSize: Style.bar.iconSlot * (root.showDpiInBar && root.deviceConnected && !vertical ? (root.batteryLevel >= 0 ? 2.9 : 2.0) : 1.0)
+    tooltipText: root.deviceName + (root.deviceConnected ? (" (" + root.currentDpi + " DPI @ " + root.currentPollRate + " Hz" + (root.batteryLevel >= 0 ? ", batteri " + root.batteryLevel + " %" + (root.charging ? " (laddar)" : "") : "") + ")") : (" " + root.t("disconnected")))
     active: root.deviceConnected
     onPressed: function(b) {
       if (b === Qt.RightButton) {
@@ -374,7 +382,7 @@ Panel {
             id: hero
             width: parent.width
             title: root.deviceName
-            meta: root.deviceConnected ? (root.currentDpi + " DPI • " + Model.pollRateLabel(root.currentPollRate)) : root.t("deviceNotDetected")
+            meta: root.deviceConnected ? (root.currentDpi + " DPI • " + Model.pollRateLabel(root.currentPollRate) + (root.batteryLevel >= 0 ? " • " + root.batteryLevel + " %" : "")) : root.t("deviceNotDetected")
             detail: root.deviceConnected ? (root.hasPermission ? root.t("onboardStatus") : root.t("udevPermissionsStatus")) : root.t("disconnectedStatus")
             foreground: root.foreground
             fontFamily: root.fontFamily
