@@ -9,6 +9,7 @@ import os
 import glob
 import json
 import struct
+import time
 import fcntl
 import argparse
 from pathlib import Path
@@ -21,6 +22,19 @@ TEMPLATE_PROFILES_FILE = SCRIPT_DIR / "profiles.json"
 
 # Razer USB Vendor ID
 RAZER_VID = 0x1532
+
+# Wireless PIDs whose *dongle* interface keeps answering with stale data while
+# the cable is in (the Naga Pro's dongle reports charge_level 0 then). The wired
+# sibling PID is 0x008f; when both are present the wired node wins.
+WIRELESS_DONGLE_PIDS = {0x0090}
+
+# Response handling: the device answers asynchronously, and until it does the
+# feature report still holds our own request with status 0x01 (BUSY --
+# razercommon.h: BUSY 0x01, SUCCESSFUL 0x02, FAILURE 0x03, TIMEOUT 0x04,
+# NOT_SUPPORTED 0x05).
+RAZER_STATUS_BUSY = 0x01       # command accepted, device hasn't answered yet
+RESPONSE_TIMEOUT_S = 0.3
+RESPONSE_POLL_S = 0.005
 
 # Linux HIDRAW IOCTL definitions
 def _IOC(dir_, typ, nr, size):
@@ -188,6 +202,11 @@ class RazerDeviceManager:
 
         # Sort candidates: prefer interface 0 or highest feature support
         # Usually interface 0 or 2 has feature report capabilities
+        # A wireless Razer mouse exposes a second, wired PID while the cable is
+        # in, and that interface is the live one: the dongle's battery report
+        # parks at 0 (measured on the Naga Pro -- charge_level fell 12 -> 0 on
+        # the dongle node while the wired node was connected). Prefer wired.
+        candidates.sort(key=lambda c: c["pid"] in WIRELESS_DONGLE_PIDS)
         best = candidates[0]
         accessible = None
         for c in candidates:
@@ -276,15 +295,23 @@ class RazerDeviceManager:
         except Exception:
             return None
 
-        # Read back response via HIDIOCGFEATURE
-        recv_buf = bytearray(91)
-        recv_buf[0] = 0x00
-        try:
-            fcntl.ioctl(self.fd, HIDIOCGFEATURE_91, recv_buf)
+        # Read back response via HIDIOCGFEATURE. The device answers
+        # asynchronously: read immediately and you get your own request back
+        # with status 0x01 (NEW) and zeroed arguments, which parses as "DPI 0".
+        # Measured on the Naga Pro: the real answer (status 0x02, args holding
+        # 1600:1600) is there within ~10 ms, so retry until the status moves.
+        deadline = time.monotonic() + RESPONSE_TIMEOUT_S
+        while True:
+            recv_buf = bytearray(91)
+            recv_buf[0] = 0x00
+            try:
+                fcntl.ioctl(self.fd, HIDIOCGFEATURE_91, recv_buf)
+            except Exception:
+                return None
             resp = recv_buf[1:]
-            return resp
-        except Exception:
-            return None
+            if resp[0] != RAZER_STATUS_BUSY or time.monotonic() >= deadline:
+                return resp
+            time.sleep(RESPONSE_POLL_S)
 
     # Hardware Control Methods
     def hw_set_dpi(self, dpi_x, dpi_y=None, profile_slot=0):
@@ -354,6 +381,24 @@ class RazerDeviceManager:
             args = struct.pack(">B", code)
             return self.send_recv_report(0x00, 0x05, 1, args)
 
+    def hw_get_battery(self):
+        """Battery level, raw 0-255 (razer_chroma_misc_get_battery_level: 0x07/0x80).
+
+        The kernel driver prints this raw value in sysfs charge_level; OpenRazer's
+        own tools scale it with (raw / 255) * 100 (openrazer_daemon mamba.py).
+        """
+        resp = self.send_recv_report(0x07, 0x80, 2, struct.pack(">BB", 0x00, 0x00))
+        if resp and resp[0] == 0x02 and len(resp) > 9:
+            return resp[9]
+        return None
+
+    def hw_get_charging(self):
+        """1 while charging, 0 otherwise (razer_chroma_misc_get_charging_status: 0x07/0x84)."""
+        resp = self.send_recv_report(0x07, 0x84, 2, struct.pack(">BB", 0x00, 0x00))
+        if resp and resp[0] == 0x02 and len(resp) > 9:
+            return resp[9] != 0
+        return None
+
     def hw_set_brightness(self, brightness):
         # Brightness 0-100% -> 0-255
         val = int(max(0, min(100, brightness)) * 255 / 100)
@@ -362,7 +407,17 @@ class RazerDeviceManager:
         return self.send_recv_report(0x0f, 0x04, 3, args)
 
     def hw_set_effect(self, effect, hex_color="#00FF66"):
-        """Set lighting effect: static, spectrum, breathing, off matching OpenRazer extended matrix."""
+        """Set lighting effect: static, spectrum, breathing, off.
+
+        The mouse has three lighting zones and each keeps its own effect, so a
+        write to one zone leaves the others showing their old state (the scroll
+        wheel keeps cycling colours while the thumb-grid obeys). Zone ids from
+        razercommon.h: SCROLL_WHEEL_LED 0x01, LOGO_LED 0x04, BACKLIGHT_LED 0x05
+        (on this model the "backlight" is the 12-button thumb-grid). A zone the
+        device doesn't have answers 0x05 NOT_SUPPORTED, so writing all three is
+        safe. Measured: the write to 0x05 lights the thumb-grid;
+        the mouse family (0x03/0x0d) is refused outright.
+        """
         # Convert hex to RGB
         hex_clean = hex_color.lstrip("#")
         if len(hex_clean) == 6:
@@ -370,22 +425,29 @@ class RazerDeviceManager:
         else:
             r, g, b = (0, 255, 102)
 
-        if effect == "off":
-            # razer_chroma_extended_matrix_effect_none: 0x0f, 0x02, size 6: [0x01, 0x04, 0x00, 0x00, 0x00, 0x00]
-            args = struct.pack(">BBBBBB", 0x01, 0x04, 0x00, 0x00, 0x00, 0x00)
-            return self.send_recv_report(0x0f, 0x02, 6, args)
-        elif effect == "spectrum":
-            # razer_chroma_extended_matrix_effect_spectrum: 0x0f, 0x02, size 6: [0x01, 0x04, 0x03, 0x00, 0x00, 0x00]
-            args = struct.pack(">BBBBBB", 0x01, 0x04, 0x03, 0x00, 0x00, 0x00)
-            return self.send_recv_report(0x0f, 0x02, 6, args)
-        elif effect == "breathing":
-            # razer_chroma_extended_matrix_effect_breathing_single: 0x0f, 0x02, size 9: [0x01, 0x04, 0x02, 0x01, 0x00, 0x01, r, g, b]
-            args = struct.pack(">BBBBBBBBB", 0x01, 0x04, 0x02, 0x01, 0x00, 0x01, r, g, b)
+        varstore = 0x01
+
+        def report(led_id):
+            if effect == "off":
+                # razer_chroma_extended_matrix_effect_none: 0x0f, 0x02, size 6
+                args = struct.pack(">BBBBBB", varstore, led_id, 0x00, 0x00, 0x00, 0x00)
+                return self.send_recv_report(0x0f, 0x02, 6, args)
+            if effect == "spectrum":
+                # razer_chroma_extended_matrix_effect_spectrum: 0x0f, 0x02, size 6
+                args = struct.pack(">BBBBBB", varstore, led_id, 0x03, 0x00, 0x00, 0x00)
+                return self.send_recv_report(0x0f, 0x02, 6, args)
+            if effect == "breathing":
+                # ..._effect_breathing_single: 0x0f, 0x02, size 9
+                args = struct.pack(">BBBBBBBBB", varstore, led_id, 0x02, 0x01, 0x00, 0x01, r, g, b)
+                return self.send_recv_report(0x0f, 0x02, 9, args)
+            # ..._effect_static: 0x0f, 0x02, size 9
+            args = struct.pack(">BBBBBBBBB", varstore, led_id, 0x01, 0x00, 0x00, 0x01, r, g, b)
             return self.send_recv_report(0x0f, 0x02, 9, args)
-        else:
-            # razer_chroma_extended_matrix_effect_static: 0x0f, 0x02, size 9: [0x01, 0x04, 0x01, 0x00, 0x00, 0x01, r, g, b]
-            args = struct.pack(">BBBBBBBBB", 0x01, 0x04, 0x01, 0x00, 0x00, 0x01, r, g, b)
-            return self.send_recv_report(0x0f, 0x02, 9, args)
+
+        last = None
+        for led_id in (0x05, 0x04, 0x01):   # thumb-grid, logo, scroll wheel
+            last = report(led_id) or last
+        return last
 
 
 class ProfileStorage:
@@ -443,6 +505,18 @@ def get_current_state():
         except Exception:
             pass
 
+    # Battery: raw 0-255 straight from the device. OpenRazer's own tools scale
+    # it with (raw / 255) * 100 (openrazer_daemon mamba.py), so show that.
+    battery_pct = None
+    charging = None
+    if mgr.has_permission:
+        try:
+            raw_battery = mgr.hw_get_battery()
+            battery_pct = round(raw_battery / 255 * 100) if raw_battery is not None else None
+            charging = mgr.hw_get_charging()
+        except Exception:
+            pass
+
     status = {
         "connected": mgr.device_info["connected"] if mgr.device_info else False,
         "name": mgr.device_info["name"] if mgr.device_info else "No Razer Device",
@@ -450,6 +524,8 @@ def get_current_state():
         "supports_8k": mgr.device_info.get("supports_8k", False) if mgr.device_info else False,
         "hidraw_path": mgr.hidraw_path,
         "has_permission": mgr.has_permission,
+        "battery": battery_pct,
+        "charging": charging,
         "activeProfile": active["id"] if active else "onboard-1",
         "activeProfileName": active["name"] if active else "Profile 1",
         "onboardSlot": active.get("onboardSlot", 1) if active else 1,
@@ -548,6 +624,8 @@ def main():
             print(f"Active Profile: {state['activeProfileName']} (Slot {state['onboardSlot']})")
             print(f"DPI: {state['dpi']} (Stage {state['active_stage']}/5: {state['dpi_stages']})")
             print(f"Polling Rate: {state['poll_rate']} Hz")
+            if state.get("battery") is not None:
+                print(f"Battery: {state['battery']}%{' (charging)' if state.get('charging') else ''}")
             print(f"Lighting: {state['effect']} ({state['effect_color']}) @ {state['brightness']}%")
         return
 
@@ -573,6 +651,12 @@ def main():
         mgr = RazerDeviceManager()
         if mgr.has_permission:
             try:
+                # A write to the onboard slot is acknowledged (status 0x02) but
+                # does not move the sensor on this mouse; the direct slot does.
+                # Measured on the Naga Pro: slot 0 -> effective DPI changes,
+                # slot 2 -> no change. Write both: slot 0 for now, the profile
+                # slot so "Save to mouse" has something to persist.
+                mgr.hw_set_dpi(val, args.y if args.y else val, 0)
                 mgr.hw_set_dpi(val, args.y if args.y else val, slot)
             finally:
                 mgr.close_device()
@@ -587,6 +671,7 @@ def main():
         mgr = RazerDeviceManager()
         if mgr.has_permission:
             try:
+                mgr.hw_set_dpi(val, val, 0)   # slot 0 = the one that moves the sensor
                 mgr.hw_set_dpi(val, val, slot)
                 time.sleep(0.015)
                 mgr.hw_set_dpi_stages(active_prof["dpi_stages"], stage_idx, slot)
