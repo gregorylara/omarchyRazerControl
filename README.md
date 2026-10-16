@@ -2,6 +2,7 @@
 
 <div align="center">
 
+[![Version](https://img.shields.io/badge/Version-2.0.0-00FF00?style=for-the-badge)](CHANGELOG.md)
 [![Omarchy Plugin](https://img.shields.io/badge/Omarchy-Plugin-black?style=for-the-badge&logo=arch-linux)](https://omarchy.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-00FF00?style=for-the-badge)](LICENSE)
 [![Platform: Linux](https://img.shields.io/badge/Platform-Linux-blue?style=for-the-badge&logo=linux)](https://kernel.org)
@@ -9,11 +10,44 @@
 
 **Native Razer Mouse Control for the Omarchy Desktop Shell**
 
-*Full On-Board Memory Profile Switching, 8000 Hz Hyper-Polling, 5-Stage DPI, and Calibrated Chroma RGB Lighting.*
+*On-board profiles, a full Profile Settings editor, 8000 Hz HyperPolling, 5-stage DPI and Chroma RGB, all from your status bar.*
+
+</div>
+
+---
+
+## 🚀 Version 2.0 is here
+
+Version 2.0 is the biggest update to Oma Razer Control so far. You can now edit every on-board profile from the panel, profile switching responds instantly, the physical button under the mouse stays in sync with the panel, and Razer mice beyond the Viper are supported.
+
+### What's new in 2.0
+
+- ⚙️ **Profile Settings editor**: a dedicated settings view for each of the 5 on-board profiles. Edit the indicator color, the DPI of every stage (1–5), the polling rate and the Chroma lighting, then save with a **Save Changes** button that stays pinned to the bottom of the panel.
+- ⚡ **Instant profile switching**: profile settings are cached, so the panel shows the new profile immediately while the mouse applies it in the background. An animated indicator on the `P1`–`P5` buttons shows when a switch is in progress.
+- 🖱️ **Bottom button sync**: the profile button and LED on the underside of the mouse are now mapped to `P1`–`P5`. Switching or saving a profile in the panel updates the LED color on the mouse, and pressing the physical button updates the panel.
+- 🧠 **Multi-model support**: a built-in database of Razer mice (Viper, DeathAdder, Basilisk, Naga, Cobra, Mamba, Orochi) plus automatic detection of 8 kHz polling, transaction ID and profile-button mode for models that aren't listed yet.
+- 📏 **Per-device DPI limits**: the DPI sliders and inputs adapt to the maximum DPI of the connected sensor (8,500 up to 35,000 DPI).
+- 🎛️ **No accidental changes**: scrolling the panel with the mouse wheel no longer moves the DPI or brightness sliders, and DPI values snap to clean steps of 50.
+- ◻️ **Square, theme-native UI**: every button, card, input and swatch follows the Omarchy aesthetic, with square corners.
+
+See the full [CHANGELOG](CHANGELOG.md).
+
+---
+
+## Screenshots
+
+<div align="center">
+
+| Main panel | Profile Settings (new in 2.0) |
+| :---: | :---: |
+| <img src="docs/panel_main_v2.png" alt="Oma Razer Control main panel" width="380"/> | <img src="docs/panel_settings_v2.png" alt="Oma Razer Control Profile Settings view" width="380"/> |
+| Profiles, DPI stages, polling rate and Chroma lighting | Per-profile color, stage DPI, polling rate and lighting |
 
 <br/>
 
-<img src="preview.png" alt="Oma Razer Control Panel" width="440" style="border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);"/>
+**Status bar widget**
+
+<img src="docs/bar_widget_v2.png" alt="Oma Razer bar widget showing the current DPI"/>
 
 </div>
 
@@ -21,40 +55,61 @@
 
 ## Overview
 
-**Oma Razer Control** brings seamless, lightweight Razer peripheral management directly to your Omarchy status bar. No bloated background daemons, no cloud accounts, and no Electron apps.
+**Oma Razer Control** adds lightweight Razer mouse management to your Omarchy status bar. It doesn't need a background daemon, a cloud account or an Electron app.
 
-Communicate directly with the mouse's internal hardware controller over native Linux `/dev/hidraw` to switch on-board profiles, tune polling rates up to **8000 Hz**, calibrate DPI stages, and customize Chroma RGB lighting effects in real time.
+The plugin talks to the mouse's hardware controller directly over Linux `/dev/hidraw`. From the panel you can switch and edit on-board profiles, set polling rates up to **8000 Hz**, adjust DPI stages and change Chroma RGB lighting in real time.
 
 ---
 
 ## Features
 
-- 󰍽 **Live Status Bar Display**: Current DPI displayed dynamically next to the mouse icon in your Omarchy bar (e.g. `󰍽 1600`).
-- ⚡ **Hyper-Polling Rates (Up to 8000 Hz)**: Switch between 125, 500, 1000, 2000, 4000, and **8000 Hz** (8K) for competitive esports performance.
-- 💾 **On-Board Memory Profiles (1–5)**: Direct access to the 5 internal hardware profiles (White, Red, Green, Blue, Cyan) stored in the mouse's internal flash memory, with one-click flashing.
-- 🎯 **5-Stage DPI Presets & Precision Slider**: Instant stage selection (e.g. 400, 800, 1600, 3200, 6400) or continuous fine-tuning from 100 to 30,000 DPI in steps of 50.
-- 🌈 **Chroma RGB Lighting**:
-  - Multiple modes: **Static**, **Spectrum Cycling**, **Breathing**, and **Off**.
-  - **Lighting zones**: on multi-zone mice (e.g. Basilisk V3: Logo, Scroll Wheel, Underglow) drive every zone together or each one separately. Zones are detected from the device (logo, scroll, underglow, left/right side strips, backlight); logo-only mice behave as before.
-  - Smooth brightness slider (0–100%).
-  - Calibrated pure optical RGB color palette (Razer Green `#00FF00`, Cyan `#00FFFF`, Cobalt Blue `#0066FF`, Purple `#9900FF`, Pure Red `#FF0000`, Amber Orange `#FF6600`, Bright Yellow `#FFFF00`, Crisp White `#FFFFFF`).
-- 🚀 **Zero Daemon Overhead**: Talks directly to the hardware using standard 90-byte Razer USB HID feature reports with CRC verification.
-- 🎨 **Adaptive Theme**: Automatically matches your active Omarchy color scheme, border radius, and typography.
-- 🌐 **Bilingual Interface (i18n)**: English by default, with full Spanish translation support (auto-detected from system locale or configurable).
-- 🔌 **Full IPC API**: Control any parameter from terminal scripts or Hyprland/Sway keybindings.
+- 󰍽 **Live status bar display**: the current DPI appears next to the mouse icon in your Omarchy bar (for example `󰍽 4800`).
+- 💾 **On-board memory profiles (P1–P5)**: switch between the 5 hardware profiles stored in the mouse's flash memory, each with its own indicator color.
+- ⚙️ **Profile Settings editor**: edit any profile's indicator color, 5 DPI stages, polling rate and lighting without switching to it first.
+- 🖱️ **Two-way bottom button sync**: the panel and the physical profile button under the mouse always agree on the active profile.
+- ⚡ **HyperPolling (up to 8000 Hz)**: choose 125, 500, 1000, 2000, 4000 or **8000 Hz** on supported mice.
+- 🎯 **5-stage DPI presets and a precision slider**: pick a stage with one click or fine-tune in steps of 50, up to your sensor's maximum.
+- 🌈 **Chroma RGB lighting**:
+  - Modes: **Static**, **Spectrum Cycling**, **Breathing** and **Off**.
+  - **Lighting zones**: on multi-zone mice (for example the Basilisk V3's logo, scroll wheel and underglow) you can drive every zone together or each one separately. Zones are detected from the device; logo-only mice work as before.
+  - Brightness slider (0–100%) and a calibrated color palette.
+- 🧠 **Multi-model support**: a known-device database plus automatic detection of each mouse's capabilities.
+- 🚀 **No daemon overhead**: commands go straight to the hardware as standard 90-byte Razer USB HID feature reports with CRC verification.
+- 🎨 **Adaptive theme**: matches your active Omarchy color scheme and typography.
+- 🌐 **Bilingual interface**: English by default, with a full Spanish translation (auto-detected from the system locale or set manually).
+- 🔌 **Full IPC API**: control every setting from scripts or Hyprland keybindings.
+
+---
+
+## Bottom button and profile mapping
+
+On mice with a profile/stage button on the underside (Viper 8KHz, Viper Mini, Cobra and similar), the LED colors map to the panel profiles like this:
+
+| Panel profile | Bottom LED color |
+| :---: | :---: |
+| **P1** | 🟨 Yellow |
+| **P2** | 🟥 Red |
+| **P3** | 🟩 Green |
+| **P4** | 🟦 Blue |
+| **P5** | 🟦 Cyan |
+
+Mice with a dedicated on-board profile button (Naga Pro, Basilisk V3, DeathAdder V2 Pro and similar) use the native on-board slot switching commands instead. The plugin picks the right mode for each model automatically.
 
 ---
 
 ## Compatibility
 
-Tested and optimized for:
-- **Razer Viper 8KHz** (`PID: 0x0091`)
-- **Razer Viper Ultimate** (Wired & Wireless)
-- **Razer Viper Mini**
-- **Razer Viper V2 Pro / V3 Pro**
-- **Razer DeathAdder V2 / V3 / Lite**
-- **Razer Basilisk V2 / V3 / Ultimate**
-- And other modern Razer peripherals supporting Razer Extended Matrix HID.
+Tested on the **Razer Viper 8KHz** (`PID: 0x0091`). The built-in device database also covers:
+
+| Family | Models |
+| --- | --- |
+| **Viper** | Viper, Viper Mini, Viper 8KHz, Viper Ultimate, Viper V2 Pro, Viper V3 Pro, Viper V3 HyperSpeed |
+| **DeathAdder** | Essential, V2, V2 Pro, V2 Mini, V3, V3 Pro |
+| **Basilisk** | V2, Ultimate, V3, V3 Pro |
+| **Naga** | Naga Pro, Naga X |
+| **Others** | Cobra, Cobra Pro, Mamba Elite, Orochi V2 |
+
+Other Razer mice that use the Razer HID protocol are detected automatically: the plugin probes for 8 kHz polling, the right transaction ID and the profile-button mode. If your model doesn't behave correctly, please [open an issue](https://github.com/gregorylara/omarchyRazerControl/issues) with the output of `./razer_ctl.py status --json`.
 
 ---
 
@@ -65,7 +120,7 @@ Tested and optimized for:
 omarchy plugin add https://github.com/gregorylara/omarchyRazerControl.git --enable
 ```
 
-### Manual Installation (Development)
+### Manual installation (development)
 ```sh
 git clone https://github.com/gregorylara/omarchyRazerControl.git ~/.config/omarchy/plugins/oma.razer
 omarchy plugin enable oma.razer --section right
@@ -74,40 +129,41 @@ omarchy restart shell
 
 ---
 
-## One-Time Hardware Access Setup (udev)
+## One-time hardware access setup (udev)
 
-To allow the Omarchy shell to interact with `/dev/hidraw*` without needing `sudo` or password prompts:
+To let the Omarchy shell talk to `/dev/hidraw*` without `sudo` or password prompts, run:
 
 ```sh
 cd ~/.config/omarchy/plugins/oma.razer
 ./setup.sh
 ```
 
-*(Alternatively, click the **"Enable"** (or **"Activar"**) button on the permissions banner directly inside the plugin popup).*
+You can also click the **Enable** button on the permissions banner inside the plugin panel.
 
-This copies `99-razer-omarchy.rules` to `/etc/udev/rules.d/` and grants read/write permissions to the `input` group.
+This installs `99-razer-omarchy.rules` into `/etc/udev/rules.d/` and gives your user read/write access to Razer HID devices.
 
 ---
 
-## Shell IPC Commands
+## Shell IPC commands
 
-Control your Razer mouse programmatically from terminal shortcuts or window manager keybindings:
+Control your Razer mouse from terminal shortcuts or window manager keybindings:
 
 ```sh
-# Interface Control
-omarchy-shell oma.razer open                 # Open the Razer flyout panel
+# Interface
+omarchy-shell oma.razer open                 # Open the Razer panel
+omarchy-shell oma.razer settings             # Open the Profile Settings view (new in 2.0)
 omarchy-shell oma.razer close                # Close the panel
 omarchy-shell oma.razer toggle               # Toggle open / close
 omarchy-shell oma.razer refresh              # Re-query device status
 
-# Hardware Settings
+# Hardware settings
 omarchy-shell oma.razer dpi 1600             # Set sensor DPI to 1600
-omarchy-shell oma.razer stage 3              # Activate DPI Stage 3
+omarchy-shell oma.razer stage 3              # Activate DPI stage 3
 omarchy-shell oma.razer poll 8000            # Set polling rate to 8000 Hz
-omarchy-shell oma.razer profile 2            # Switch to On-Board Profile 2 (Red)
+omarchy-shell oma.razer profile 2            # Switch to on-board profile P2
 omarchy-shell oma.razer brightness 100       # Set LED brightness to 100% (all zones)
 omarchy-shell oma.razer effect static        # Lighting: static, spectrum, breathing, off (all zones)
-omarchy-shell oma.razer color "#00FF00"      # Apply hex color to current effect (all zones)
+omarchy-shell oma.razer color "#00FF00"      # Apply a hex color to the current effect (all zones)
 
 # Single lighting zone: logo, scroll, underglow, left, right, backlight
 omarchy-shell oma.razer zoneBrightness underglow 40
@@ -117,27 +173,38 @@ omarchy-shell oma.razer zoneColor logo "#FF0000"
 
 ---
 
-## Standalone CLI Utility (`razer_ctl.py`)
+## Standalone CLI (`razer_ctl.py`)
 
-The included backend script can also be executed independently outside the desktop shell:
+The backend script also works on its own, outside the desktop shell:
 
 ```sh
-./razer_ctl.py status --json                 # Output JSON device & profile status
-./razer_ctl.py set-dpi 1600                  # Adjust DPI
+./razer_ctl.py status --json                 # Device, capabilities and profile status as JSON
+./razer_ctl.py set-dpi 1600                  # Set DPI
 ./razer_ctl.py set-stage 2                   # Switch DPI stage
+./razer_ctl.py set-dpi-stages 800 1600 3200 4800 6400 --active 2   # Set all 5 stage values
 ./razer_ctl.py set-poll-rate 8000            # Set polling rate in Hz
-./razer_ctl.py set-effect static --color "#00FF00" # Static Razer Green (all zones)
-./razer_ctl.py set-effect static --color "#FF0000" --zone underglow # One zone only
-./razer_ctl.py set-brightness 50 --zone logo # Zone brightness (all, logo, scroll, underglow, left, right, backlight)
-./razer_ctl.py profile switch 1              # Switch on-board slot
-./razer_ctl.py profile save --slot 1         # Burn current settings into slot
+./razer_ctl.py set-effect static --color "#00FF00"                 # Static green (all zones)
+./razer_ctl.py set-effect static --color "#FF0000" --zone underglow
+./razer_ctl.py set-brightness 50 --zone logo
+./razer_ctl.py profile switch 1              # Switch on-board profile
+./razer_ctl.py profile save --slot 1         # Save current settings to a slot
+
+# Edit any profile slot (new in 2.0)
+./razer_ctl.py profile update --slot 3 \
+  --badge-color "#00FF00" \
+  --dpi-stages 2400,3400,4800,5000,5200 \
+  --active-stage 3 \
+  --poll-rate 8000 \
+  --effect static --color "#00FF00" --brightness 100
 ```
+
+Profiles are stored in `~/.local/state/omarchy/razer/profiles.json`.
 
 ---
 
 ## Configuration (`shell.json`)
 
-Customize settings in `~/.config/omarchy/shell.json` under your bar configuration:
+Set these options in `~/.config/omarchy/shell.json` under your bar configuration:
 
 ```json
 {
@@ -151,20 +218,27 @@ Customize settings in `~/.config/omarchy/shell.json` under your bar configuratio
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `showDpiInBar` | `boolean` | `true` | Display current DPI next to the mouse icon in the bar |
-| `onlyWhenConnected` | `boolean` | `false` | Automatically hide the widget when mouse is disconnected |
-| `notifyOnConnect` | `boolean` | `true` | Send a desktop notification when mouse is plugged in |
+| `showDpiInBar` | `boolean` | `true` | Show the current DPI next to the mouse icon in the bar |
+| `onlyWhenConnected` | `boolean` | `false` | Hide the widget when the mouse is disconnected |
+| `notifyOnConnect` | `boolean` | `true` | Send a desktop notification when the mouse is plugged in |
 | `language` | `string` | `"en"` | Interface language: `"en"` (default), `"es"`, or `"auto"` (system locale) |
 
 ---
 
 ## Architecture
 
-- **`Panel.qml`**: Interactive Quickshell flyout panel & status bar widget.
-- **`Model.js`**: Telemetry parsing, badge color mapping, and display formatting.
-- **`razer_ctl.py`**: Direct HID controller using Linux `ioctl(HIDIOCSFEATURE / HIDIOCGFEATURE)` and `fcntl.flock` file locking for concurrency safety.
-- **`99-razer-omarchy.rules`**: udev rule for secure rootless device access.
-- **`setup.sh`**: Automated udev installation helper.
+- **`Panel.qml`**: Quickshell panel and status bar widget, including the Profile Settings view and the profile cache.
+- **`Model.js`**: telemetry parsing, default profiles, badge color mapping and translations.
+- **`razer_ctl.py`**: direct HID controller. It includes the device database, capability probing, bottom-button and on-board slot sync, and uses `ioctl(HIDIOCSFEATURE / HIDIOCGFEATURE)` with `fcntl.flock` locking for safe concurrent access.
+- **`profiles.json`**: default profile template for new installs.
+- **`99-razer-omarchy.rules`**: udev rule for rootless device access.
+- **`setup.sh`**: udev installation helper.
+
+---
+
+## Contributors
+
+Thanks to everyone who has contributed, including multi-zone lighting support ([@headband42](https://github.com/headband42)) and async HID response, battery and wired-node fixes ([@alexwest1981](https://github.com/alexwest1981)).
 
 ---
 

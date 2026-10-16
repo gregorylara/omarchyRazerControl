@@ -5,21 +5,23 @@ function parseOutput(rawText) {
     connected: false,
     name: "Razer Mouse",
     pid: "0x0000",
+    max_dpi: 20000,
     supports_8k: false,
+    profile_mode: "dpi_led",
     hidraw_path: "",
     has_permission: false,
-    activeProfile: "onboard-1",
-    activeProfileName: "Profile 1",
-    onboardSlot: 1,
-    dpi: 1600,
-    dpi_stages: [400, 800, 1600, 3200, 6400],
+    activeProfile: "onboard-3",
+    activeProfileName: "Profile 3",
+    onboardSlot: 3,
+    dpi: 4800,
+    dpi_stages: [2400, 3400, 4800, 5000, 5200],
     active_stage: 3,
-    poll_rate: 1000,
+    poll_rate: 8000,
     battery: -1,
     charging: false,
     brightness: 100,
-    effect: "spectrum",
-    effect_color: "#00FF66",
+    effect: "static",
+    effect_color: "#00FF00",
     lighting_zones: ["logo"],
     zones: {},
     profiles: []
@@ -39,21 +41,23 @@ function parseOutput(rawText) {
       result.connected = Boolean(data.connected);
       result.name = data.name || "Razer Device";
       result.pid = data.pid || "0x0000";
+      result.max_dpi = Number(data.max_dpi) || 20000;
       result.supports_8k = Boolean(data.supports_8k);
+      result.profile_mode = data.profile_mode || "dpi_led";
       result.hidraw_path = data.hidraw_path || "";
       result.has_permission = Boolean(data.has_permission);
-      result.activeProfile = data.activeProfile || "onboard-1";
-      result.activeProfileName = data.activeProfileName || "Profile 1";
-      result.onboardSlot = Number(data.onboardSlot) || 1;
-      result.dpi = Number(data.dpi) || 1600;
-      result.dpi_stages = Array.isArray(data.dpi_stages) ? data.dpi_stages : [400, 800, 1600, 3200, 6400];
+      result.activeProfile = data.activeProfile || "onboard-3";
+      result.activeProfileName = data.activeProfileName || "Profile 3";
+      result.onboardSlot = Number(data.onboardSlot) || 3;
+      result.dpi = Number(data.dpi) || 4800;
+      result.dpi_stages = Array.isArray(data.dpi_stages) ? data.dpi_stages : [2400, 3400, 4800, 5000, 5200];
       result.active_stage = Number(data.active_stage) || 3;
-      result.poll_rate = Number(data.poll_rate) || 1000;
+      result.poll_rate = Number(data.poll_rate) || 8000;
       result.brightness = (data.brightness !== undefined) ? Number(data.brightness) : 100;
       result.battery = (data.battery === null || data.battery === undefined) ? -1 : Number(data.battery);
       result.charging = Boolean(data.charging);
       result.brightness = Number(data.brightness) || 100;
-      result.effect = data.effect || "spectrum";
+      result.effect = data.effect || "static";
       result.effect_color = data.effect_color || "#00FF00";
       result.lighting_zones = (Array.isArray(data.lighting_zones) && data.lighting_zones.length) ? data.lighting_zones : ["logo"];
       result.zones = (data.zones && typeof data.zones === "object") ? data.zones : {};
@@ -66,15 +70,47 @@ function parseOutput(rawText) {
   return result;
 }
 
-function badgeColorForSlot(slot) {
-  switch (Number(slot)) {
-    case 1: return "#FFFFFF";
+function badgeColorForSlot(slot, profiles) {
+  var s = Number(slot);
+  if (Array.isArray(profiles)) {
+    for (var i = 0; i < profiles.length; i++) {
+      if (Number(profiles[i].onboardSlot) === s && profiles[i].badgeColor) {
+        return profiles[i].badgeColor;
+      }
+    }
+  }
+  switch (s) {
+    case 1: return "#FFFF00";
     case 2: return "#FF0000";
     case 3: return "#00FF00";
     case 4: return "#0066FF";
     case 5: return "#00FFFF";
     default: return "#00FF00";
   }
+}
+
+function defaultProfileForSlot(slot) {
+  var s = Number(slot) || 1;
+  var defaults = {
+    1: { id: "onboard-1", name: "Profile 1 (Default / Yellow)", onboardSlot: 1, badgeColor: "#FFFF00", dpi: 2400, dpi_stages: [2400, 3400, 4800, 5000, 5200], active_stage: 1, poll_rate: 8000, brightness: 100, effect: "static", effect_color: "#FFFF00" },
+    2: { id: "onboard-2", name: "Profile 2 (FPS Ultra / Red)", onboardSlot: 2, badgeColor: "#FF0000", dpi: 3400, dpi_stages: [2400, 3400, 4800, 5000, 5200], active_stage: 2, poll_rate: 8000, brightness: 100, effect: "static", effect_color: "#FF0000" },
+    3: { id: "onboard-3", name: "Profile 3 (MOBA / Green)", onboardSlot: 3, badgeColor: "#00FF00", dpi: 4800, dpi_stages: [2400, 3400, 4800, 5000, 5200], active_stage: 3, poll_rate: 8000, brightness: 100, effect: "static", effect_color: "#00FF00" },
+    4: { id: "onboard-4", name: "Profile 4 (Productivity / Blue)", onboardSlot: 4, badgeColor: "#0066FF", dpi: 5000, dpi_stages: [2400, 3400, 4800, 5000, 5200], active_stage: 4, poll_rate: 8000, brightness: 100, effect: "static", effect_color: "#0066FF" },
+    5: { id: "onboard-5", name: "Profile 5 (Stealth / Cyan)", onboardSlot: 5, badgeColor: "#00FFFF", dpi: 5200, dpi_stages: [2400, 3400, 4800, 5000, 5200], active_stage: 5, poll_rate: 8000, brightness: 100, effect: "static", effect_color: "#00FFFF" }
+  };
+  return defaults[s] || defaults[3];
+}
+
+function profileForSlot(slot, profiles) {
+  var s = Number(slot) || 1;
+  if (Array.isArray(profiles)) {
+    for (var i = 0; i < profiles.length; i++) {
+      if (Number(profiles[i].onboardSlot) === s) {
+        return profiles[i];
+      }
+    }
+  }
+  return defaultProfileForSlot(s);
 }
 
 function pollRateLabel(rate) {
@@ -98,6 +134,16 @@ var translations = {
     activateBtn: "Enable",
     onboardProfilesTitle: "ON-BOARD MEMORY PROFILES",
     saveToMouseBtn: "Save to mouse",
+    switchingProfile: "Applying profile...",
+    profileSettingsBtn: "Settings",
+    closeSettingsBtn: "Back",
+    saveChangesBtn: "Save Changes",
+    profileSettingsTitle: "PROFILE SETTINGS",
+    editingProfileLabel: "Profile Slot",
+    profileBadgeColorLabel: "Profile Indicator Color",
+    dpiStagesEditorLabel: "DPI per Stage (1–5)",
+    profilePollingLabel: "Profile Polling Rate",
+    profileLightingLabel: "Profile Chroma Lighting",
     sensitivityTitle: "SENSITIVITY (DPI)",
     stageLabel: "Stage",
     pollingRateTitle: "POLLING RATE",
@@ -128,6 +174,16 @@ var translations = {
     activateBtn: "Activar",
     onboardProfilesTitle: "PERFILES EN MEMORIA (ON-BOARD)",
     saveToMouseBtn: "Guardar en ratón",
+    switchingProfile: "Cambiando perfil...",
+    profileSettingsBtn: "Ajustes",
+    closeSettingsBtn: "Volver",
+    saveChangesBtn: "Guardar cambios",
+    profileSettingsTitle: "AJUSTES DE PERFILES",
+    editingProfileLabel: "Seleccionar Perfil",
+    profileBadgeColorLabel: "Color del Perfil",
+    dpiStagesEditorLabel: "DPI de cada Stage (1–5)",
+    profilePollingLabel: "Polling Rate del Perfil",
+    profileLightingLabel: "Color y Efecto del Perfil",
     sensitivityTitle: "SENSIBILIDAD (DPI)",
     stageLabel: "Etapa",
     pollingRateTitle: "TASA DE SONDEO (POLLING RATE)",

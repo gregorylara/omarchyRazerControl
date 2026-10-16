@@ -2,10 +2,10 @@
   "schemaVersion": 1,
   "id": "oma.razer",
   "name": "Oma Razer",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "author": "Gregory Lara",
   "license": "MIT",
-  "description": "Razer mouse status and hardware controls (DPI stages, polling rate up to 8000Hz, Chroma RGB, and on-board profiles)",
+  "description": "Razer mouse control for Omarchy: on-board profiles with a full Profile Settings editor, 5-stage DPI, polling up to 8000 Hz, Chroma RGB, and multi-model support",
   "kinds": [
     "bar-widget"
   ],
@@ -14,11 +14,14 @@
   },
   "barWidget": {
     "displayName": "Razer",
-    "description": "Razer mouse control with live DPI, polling rate, Chroma lighting, and on-board memory profiles",
+    "description": "Razer mouse control with live DPI, editable on-board profiles, polling rate, Chroma lighting, and bottom-button sync",
     "category": "Hardware",
     "aliases": [
       "razer",
       "viper",
+      "deathadder",
+      "basilisk",
+      "naga",
       "mouse",
       "oma.razercontrol"
     ],
