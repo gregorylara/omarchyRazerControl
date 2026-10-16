@@ -816,7 +816,6 @@ Panel {
                       cursorShape: Qt.PointingHandCursor
                       onClicked: {
                         root.loadDraftForSlot(parent.sNum)
-                        stageDpiInput.text = String(settingsViewCol.currentDraftStageDpi)
                       }
                     }
                   }
@@ -942,7 +941,6 @@ Panel {
                       onClicked: {
                         root.editingStageIdx = parent.stIdx
                         root.draftActiveStage = parent.stIdx
-                        stageDpiInput.text = String(parent.stVal)
                       }
                     }
                   }
@@ -980,7 +978,6 @@ Panel {
                       onClicked: {
                         var nextVal = Math.max(100, settingsViewCol.currentDraftStageDpi + modelData)
                         root.setDraftStageDpi(root.editingStageIdx, nextVal)
-                        stageDpiInput.text = String(nextVal)
                       }
                     }
                   }
@@ -991,34 +988,28 @@ Panel {
                   implicitHeight: Style.space(28)
                   radius: Style.cornerRadius
                   color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.08)
-                  border.color: stageDpiInput.activeFocus ? Color.accent : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.2)
-                  border.width: stageDpiInput.activeFocus ? 1.5 : 1
+                  border.color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.2)
+                  border.width: 1
 
-                  TextInput {
-                    id: stageDpiInput
-                    anchors.fill: parent
-                    horizontalAlignment: Qt.AlignHCenter
-                    verticalAlignment: Qt.AlignVCenter
-                    text: String(settingsViewCol.currentDraftStageDpi)
-                    font.family: root.fontFamily
-                    font.pixelSize: Style.font.caption
-                    font.bold: true
-                    color: root.foreground
-                    selectByMouse: true
-                    validator: IntValidator { bottom: 100; top: root.maxDpi }
-                    onTextEdited: {
-                      var v = parseInt(text)
-                      if (!isNaN(v) && v >= 100 && v <= root.maxDpi) {
-                        root.setDraftStageDpi(root.editingStageIdx, v)
-                      }
+                  Row {
+                    anchors.centerIn: parent
+                    spacing: Style.space(4)
+
+                    Text {
+                      anchors.verticalCenter: parent.verticalCenter
+                      text: String(settingsViewCol.currentDraftStageDpi)
+                      font.family: root.fontFamily
+                      font.pixelSize: Style.font.caption
+                      font.bold: true
+                      color: root.foreground
                     }
-                    onAccepted: {
-                      var v = parseInt(text)
-                      if (!isNaN(v)) {
-                        root.setDraftStageDpi(root.editingStageIdx, v)
-                        text = String(settingsViewCol.currentDraftStageDpi)
-                      }
-                      keyCatcher.forceActiveFocus()
+
+                    Text {
+                      anchors.verticalCenter: parent.verticalCenter
+                      text: "DPI"
+                      font.family: root.fontFamily
+                      font.pixelSize: Style.font.fineprint
+                      color: Qt.darker(root.foreground, 1.3)
                     }
                   }
                 }
@@ -1049,7 +1040,6 @@ Panel {
                       onClicked: {
                         var nextVal = Math.min(root.maxDpi, settingsViewCol.currentDraftStageDpi + modelData)
                         root.setDraftStageDpi(root.editingStageIdx, nextVal)
-                        stageDpiInput.text = String(nextVal)
                       }
                     }
                   }
@@ -1067,12 +1057,10 @@ Panel {
                 value: settingsViewCol.currentDraftStageDpi
                 onMoved: function(v) {
                   var snapped = Math.round(v / 50) * 50
-                  stageDpiInput.text = String(snapped)
                   root.setDraftStageDpi(root.editingStageIdx, snapped)
                 }
                 onReleased: function(v) {
                   var snapped = Math.round(v / 50) * 50
-                  stageDpiInput.text = String(snapped)
                   root.setDraftStageDpi(root.editingStageIdx, snapped)
                 }
                 MouseArea {
@@ -1245,7 +1233,6 @@ Panel {
                     cursorShape: Qt.PointingHandCursor
                     onClicked: {
                       root.openProfileSettings(root.currentOnboardSlot)
-                      stageDpiInput.text = String(settingsViewCol.currentDraftStageDpi)
                     }
                   }
                 }

@@ -1,5 +1,5 @@
-# Omarchy udev rules for Razer gaming peripherals
-# Grants regular logged-in users direct access to configure DPI, polling rate, Chroma RGB, and on-board profiles.
+# Omarchy udev rules for Razer gaming mice (PIDs 00xx)
+# Restricts access to mice only (excluding keyboards 01xx/02xx) and uses active-seat uaccess with 0660 mode.
 
-SUBSYSTEM=="hidraw", ATTRS{idVendor}=="1532", MODE="0666", GROUP="input", TAG+="uaccess"
-KERNEL=="hidraw*", ATTRS{idVendor}=="1532", MODE="0666", GROUP="input", TAG+="uaccess"
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="1532", ATTRS{idProduct}=="00*", TAG+="uaccess", MODE="0660", GROUP="input"
+KERNEL=="hidraw*", ATTRS{idVendor}=="1532", ATTRS{idProduct}=="00*", TAG+="uaccess", MODE="0660", GROUP="input"

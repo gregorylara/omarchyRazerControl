@@ -140,7 +140,7 @@ cd ~/.config/omarchy/plugins/oma.razer
 
 You can also click the **Enable** button on the permissions banner inside the plugin panel.
 
-This installs `99-razer-omarchy.rules` into `/etc/udev/rules.d/` and gives your user read/write access to Razer HID devices.
+This installs `99-razer-omarchy.rules` into `/etc/udev/rules.d/` and grants your active logged-in seat user read/write access to Razer mice.
 
 ---
 

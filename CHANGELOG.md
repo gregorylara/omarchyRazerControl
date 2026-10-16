@@ -27,7 +27,8 @@ Version 2.0 is the largest update to the plugin so far.
 - Scrolling the panel with the mouse wheel no longer changes the DPI or brightness sliders.
 - Saving a profile no longer changes the bottom LED to the wrong color.
 - Switching profiles now updates the sensor DPI immediately.
-- udev rule now grants `MODE="0666"` so the shell can access the device without root.
+- Secure udev rule scoping: restricted exclusively to Razer mice (PIDs `00xx`) using `TAG+="uaccess"` and `MODE="0660"`, preventing raw keyboard HID exposure and denying access to unrelated local accounts.
+- Hardened panel against clipboard hangs: replaced native Qt `TextInput` with a clean display and steppers, eliminating Wayland clipboard stalls in the shared `omarchy-shell` environment.
 
 ## [1.0.0]
 
