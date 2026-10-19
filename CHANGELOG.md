@@ -2,6 +2,16 @@
 
 All notable changes to Oma Razer Control are documented in this file.
 
+## [2.0.1] - 2026-10-19
+
+### Added
+- **Profile & DPI stage quick-cycling IPC commands** for Hyprland keybindings:
+  - `omarchy-shell oma.razer nextProfile` / `prevProfile` (and `profile next` / `profile prev`) to cycle through on-board profiles (`P1`–`P5`) with zero UI lag.
+  - `omarchy-shell oma.razer nextStage` / `prevStage` (and `stage next` / `stage prev`) to cycle through DPI stages (`1`–`5`) on the active profile.
+- **Standalone CLI cycling**: `./razer_ctl.py profile next|prev`, `./razer_ctl.py profile switch next|prev`, and `./razer_ctl.py set-stage next|prev`.
+- **OSD notifications on profile/stage switch**: `notifyOnProfileSwitch` setting (`true` by default) in `manifest.json` and `shell.json` to display a desktop notification with the active profile, DPI, and polling rate when switching via keybinding or IPC.
+- **Hyprland keybinding documentation**: added recommended `SUPER + CTRL + M` binding example for `~/.config/hypr/bindings.lua` in `README.md`.
+
 ## [2.0.0] - 2026-10-16
 
 Version 2.0 is the largest update to the plugin so far.

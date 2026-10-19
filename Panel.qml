@@ -24,6 +24,7 @@ Panel {
   readonly property bool showDpiInBar: setting("showDpiInBar", true) !== false
   readonly property bool onlyWhenConnected: setting("onlyWhenConnected", false) !== false
   readonly property bool notifyOnConnect: setting("notifyOnConnect", true) !== false
+  readonly property bool notifyOnProfileSwitch: setting("notifyOnProfileSwitch", true) !== false
   readonly property string languageSetting: setting("language", "en")
   readonly property string currentLang: {
     var l = (root.languageSetting || "en").toLowerCase()
@@ -115,6 +116,24 @@ Panel {
     ])
   }
 
+  function sendProfileSwitchNotification(slotNum) {
+    if (!root.notifyOnProfileSwitch) return
+    var prof = Model.profileForSlot(slotNum, root.allProfiles)
+    var title = (prof.name || ("Profile " + slotNum))
+    var dpi = Number(prof.dpi) || root.currentDpi
+    var poll = Number(prof.poll_rate) || root.currentPollRate
+    var desc = "P" + slotNum + " • " + dpi + " DPI @ " + poll + " Hz"
+    Quickshell.execDetached([
+      "omarchy-notification-send",
+      "--app-name", "oma.razer",
+      "-g", "󰍽",
+      "-t", "2000",
+      title,
+      desc,
+      "--exec", "omarchy-shell", "oma.razer", "open"
+    ])
+  }
+
   property double lastUserActionTime: 0
 
   function updateCachedProfile(slot, patch) {
@@ -185,14 +204,41 @@ Panel {
     Quickshell.execDetached([root.scriptPath, "set-dpi", String(val)])
   }
 
-  function applyStage(idx) {
-    idx = Math.max(1, Math.min(5, idx))
+  function cycleStage(delta, notify) {
+    var baseStage = Number(root.currentActiveStage) || 1
+    var step = Number(delta) || 1
+    var nextSt = (((baseStage - 1 + step) % 5 + 5) % 5) + 1
+    root.applyStage(nextSt, notify !== false)
+  }
+
+  function applyStage(target, notify) {
+    var tStr = String(target || "").trim().toLowerCase()
+    if (tStr === "next") {
+      root.cycleStage(1, notify !== false)
+      return
+    }
+    if (tStr === "prev" || tStr === "previous") {
+      root.cycleStage(-1, notify !== false)
+      return
+    }
+    var idx = Math.max(1, Math.min(5, parseInt(target) || 1))
     root.lastUserActionTime = Date.now()
     root.currentActiveStage = idx
     if (root.currentDpiStages && root.currentDpiStages.length >= idx) {
       root.currentDpi = root.currentDpiStages[idx - 1]
     }
     root.updateCachedProfile(root.currentOnboardSlot, { active_stage: idx, dpi: root.currentDpi })
+    if (notify === true && root.notifyOnProfileSwitch) {
+      Quickshell.execDetached([
+        "omarchy-notification-send",
+        "--app-name", "oma.razer",
+        "-g", "󰍽",
+        "-t", "1800",
+        root.t("stageLabel") + " " + idx + "/5 • " + root.currentDpi + " DPI",
+        "P" + root.currentOnboardSlot + " • " + root.activeProfileName,
+        "--exec", "omarchy-shell", "oma.razer", "open"
+      ])
+    }
     Quickshell.execDetached([root.scriptPath, "set-stage", String(idx)])
   }
 
@@ -267,18 +313,40 @@ Panel {
     Quickshell.execDetached([root.scriptPath, "set-effect", eff, "--color", change.effect_color, "--zone", zone])
   }
 
-  function switchProfile(target) {
-    if (String(target) === "settings") {
+  function cycleProfile(delta, notify) {
+    var baseSlot = (root.isSwitchingProfile && root.switchingToSlot > 0)
+      ? root.switchingToSlot
+      : (Number(root.currentOnboardSlot) || 1)
+    var step = Number(delta) || 1
+    var nextSlot = (((baseSlot - 1 + step) % 5 + 5) % 5) + 1
+    root.switchProfile(nextSlot, notify !== false)
+  }
+
+  function switchProfile(target, notify) {
+    var tStr = String(target || "").trim().toLowerCase()
+    if (tStr === "settings") {
       root.open()
       root.openProfileSettings(root.currentOnboardSlot)
       return
     }
-    var slotNum = parseInt(target) || 1
+    if (tStr === "next") {
+      root.cycleProfile(1, notify !== false)
+      return
+    }
+    if (tStr === "prev" || tStr === "previous") {
+      root.cycleProfile(-1, notify !== false)
+      return
+    }
+    var slotNum = Math.max(1, Math.min(5, parseInt(target) || 1))
     root.lastUserActionTime = Date.now()
     // 1. Apply cached profile settings immediately to UI so there is zero lag
     root.applyCachedProfileToUi(slotNum)
     root.editingProfileSlot = slotNum
     root.editingStageIdx = root.currentActiveStage
+
+    if (notify === true) {
+      root.sendProfileSwitchNotification(slotNum)
+    }
 
     // 2. Start animated hardware switch process
     root.switchingToSlot = slotNum
@@ -414,9 +482,13 @@ Panel {
     function toggle(): void { root.toggle() }
     function refresh(): void { root.refresh() }
     function dpi(val: string): void { root.applyDpi(parseInt(val)) }
-    function stage(val: string): void { root.applyStage(parseInt(val)) }
+    function stage(val: string): void { root.applyStage(val, true) }
+    function nextStage(): void { root.cycleStage(1, true) }
+    function prevStage(): void { root.cycleStage(-1, true) }
     function poll(val: string): void { root.applyPollRate(parseInt(val)) }
-    function profile(val: string): void { root.switchProfile(val) }
+    function profile(val: string): void { root.switchProfile(val, true) }
+    function nextProfile(): void { root.cycleProfile(1, true) }
+    function prevProfile(): void { root.cycleProfile(-1, true) }
     function brightness(val: string): void { root.applyBrightness(parseInt(val), "all") }
     function effect(val: string): void { root.applyEffect(val, root.allLighting.effect_color, "all") }
     function color(val: string): void { root.applyEffect((root.allLighting.effect === "breathing") ? "breathing" : "static", val, "all") }
@@ -433,9 +505,13 @@ Panel {
     function toggle(): void { root.toggle() }
     function refresh(): void { root.refresh() }
     function dpi(val: string): void { root.applyDpi(parseInt(val)) }
-    function stage(val: string): void { root.applyStage(parseInt(val)) }
+    function stage(val: string): void { root.applyStage(val, true) }
+    function nextStage(): void { root.cycleStage(1, true) }
+    function prevStage(): void { root.cycleStage(-1, true) }
     function poll(val: string): void { root.applyPollRate(parseInt(val)) }
-    function profile(val: string): void { root.switchProfile(val) }
+    function profile(val: string): void { root.switchProfile(val, true) }
+    function nextProfile(): void { root.cycleProfile(1, true) }
+    function prevProfile(): void { root.cycleProfile(-1, true) }
     function brightness(val: string): void { root.applyBrightness(parseInt(val), "all") }
     function effect(val: string): void { root.applyEffect(val, root.allLighting.effect_color, "all") }
     function color(val: string): void { root.applyEffect((root.allLighting.effect === "breathing") ? "breathing" : "static", val, "all") }

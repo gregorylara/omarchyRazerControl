@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "oma.razer",
   "name": "Oma Razer",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "author": "Gregory Lara",
   "license": "MIT",
   "description": "Razer mouse control for Omarchy: on-board profiles with a full Profile Settings editor, 5-stage DPI, polling up to 8000 Hz, Chroma RGB, and multi-model support",
@@ -31,6 +31,7 @@
       "showDpiInBar": true,
       "onlyWhenConnected": false,
       "notifyOnConnect": true,
+      "notifyOnProfileSwitch": true,
       "language": "en"
     },
     "schema": [
@@ -53,6 +54,13 @@
         "type": "boolean",
         "label": "Notify on mouse connection",
         "description": "Send a desktop notification whenever a Razer mouse is connected",
+        "defaultValue": true
+      },
+      {
+        "key": "notifyOnProfileSwitch",
+        "type": "boolean",
+        "label": "Notify on profile switch",
+        "description": "Send a desktop notification when switching profiles via keybinding or IPC",
         "defaultValue": true
       },
       {

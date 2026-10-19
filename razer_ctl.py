@@ -874,8 +874,8 @@ def main():
     p_dpi.add_argument("--y", type=int, default=None, help="Optional Y DPI")
 
     # set-stage
-    p_stage = sub.add_parser("set-stage", help="Select active DPI stage (1-5)")
-    p_stage.add_argument("stage", type=int, help="Stage index (1 to 5)")
+    p_stage = sub.add_parser("set-stage", help="Select active DPI stage (1-5, next, or prev)")
+    p_stage.add_argument("stage", type=str, help="Stage index (1 to 5), 'next', or 'prev'")
 
     # set-dpi-stages
     p_stages = sub.add_parser("set-dpi-stages", help="Set the 5 DPI stage values")
@@ -902,8 +902,11 @@ def main():
     p_prof = sub.add_parser("profile", help="Manage profiles")
     p_prof_sub = p_prof.add_subparsers(dest="profile_action")
     
-    p_sw = p_prof_sub.add_parser("switch", help="Switch active profile")
-    p_sw.add_argument("target", help="Profile ID or Onboard slot (1-5)")
+    p_sw = p_prof_sub.add_parser("switch", help="Switch active profile (1-5, next, prev, or name)")
+    p_sw.add_argument("target", help="Profile ID, Onboard slot (1-5), 'next', or 'prev'")
+
+    p_prof_sub.add_parser("next", help="Cycle to next on-board profile (P1 -> P5 -> P1)")
+    p_prof_sub.add_parser("prev", help="Cycle to previous on-board profile (P5 -> P1 -> P5)")
 
     p_save = p_prof_sub.add_parser("save", help="Save current settings to active profile / mouse slot")
     p_save.add_argument("--slot", type=int, default=None, help="Target onboard memory slot (1-5)")
@@ -976,8 +979,17 @@ def main():
         print(f"DPI updated to {val}")
 
     elif args.cmd == "set-stage":
-        stage_idx = max(1, min(len(active_prof.get("dpi_stages", [])), args.stage))
-        val = active_prof["dpi_stages"][stage_idx - 1]
+        stages_list = active_prof.get("dpi_stages", [400, 800, 1600, 3200, 6400])
+        num_stages = max(1, len(stages_list))
+        cur_stage = int(active_prof.get("active_stage", 1) or 1)
+        st_arg = str(args.stage).strip().lower()
+        if st_arg == "next":
+            stage_idx = (cur_stage % num_stages) + 1
+        elif st_arg in ("prev", "previous"):
+            stage_idx = ((cur_stage - 2) % num_stages) + 1
+        else:
+            stage_idx = max(1, min(num_stages, int(st_arg)))
+        val = stages_list[stage_idx - 1]
         active_prof["active_stage"] = stage_idx
         active_prof["dpi"] = val
         ProfileStorage.save(data)
@@ -1060,8 +1072,14 @@ def main():
         print(f"Effect set to {args.effect} ({args.color}, {args.zone})")
 
     elif args.cmd == "profile":
-        if args.profile_action == "switch":
-            target = args.target.strip()
+        if args.profile_action in ("switch", "next", "prev"):
+            target = args.profile_action if args.profile_action in ("next", "prev") else args.target.strip()
+            current_slot = int(active_prof.get("onboardSlot", 1) or 1) if active_prof else 1
+            if target.lower() == "next":
+                target = str((current_slot % 5) + 1)
+            elif target.lower() in ("prev", "previous"):
+                target = str(((current_slot - 2) % 5) + 1)
+
             # If target is number 1-5, find onboard slot
             found = None
             if target.isdigit():

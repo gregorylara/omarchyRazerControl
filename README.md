@@ -2,7 +2,7 @@
 
 <div align="center">
 
-[![Version](https://img.shields.io/badge/Version-2.0.0-00FF00?style=for-the-badge)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-2.0.1-00FF00?style=for-the-badge)](CHANGELOG.md)
 [![Omarchy Plugin](https://img.shields.io/badge/Omarchy-Plugin-black?style=for-the-badge&logo=arch-linux)](https://omarchy.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-00FF00?style=for-the-badge)](LICENSE)
 [![Platform: Linux](https://img.shields.io/badge/Platform-Linux-blue?style=for-the-badge&logo=linux)](https://kernel.org)
@@ -159,8 +159,16 @@ omarchy-shell oma.razer refresh              # Re-query device status
 # Hardware settings
 omarchy-shell oma.razer dpi 1600             # Set sensor DPI to 1600
 omarchy-shell oma.razer stage 3              # Activate DPI stage 3
+omarchy-shell oma.razer nextStage            # Cycle to next DPI stage (1 → 2 → ... → 5 → 1)
+omarchy-shell oma.razer prevStage            # Cycle to previous DPI stage (5 → 4 → ... → 1 → 5)
+omarchy-shell oma.razer stage next           # Alias for nextStage
+omarchy-shell oma.razer stage prev           # Alias for prevStage
 omarchy-shell oma.razer poll 8000            # Set polling rate to 8000 Hz
 omarchy-shell oma.razer profile 2            # Switch to on-board profile P2
+omarchy-shell oma.razer nextProfile          # Cycle to next profile (P1 → P2 → ... → P5 → P1)
+omarchy-shell oma.razer prevProfile          # Cycle to previous profile (P5 → P4 → ... → P1 → P5)
+omarchy-shell oma.razer profile next         # Alias for nextProfile
+omarchy-shell oma.razer profile prev         # Alias for prevProfile
 omarchy-shell oma.razer brightness 100       # Set LED brightness to 100% (all zones)
 omarchy-shell oma.razer effect static        # Lighting: static, spectrum, breathing, off (all zones)
 omarchy-shell oma.razer color "#00FF00"      # Apply a hex color to the current effect (all zones)
@@ -169,6 +177,16 @@ omarchy-shell oma.razer color "#00FF00"      # Apply a hex color to the current 
 omarchy-shell oma.razer zoneBrightness underglow 40
 omarchy-shell oma.razer zoneEffect scroll spectrum
 omarchy-shell oma.razer zoneColor logo "#FF0000"
+```
+
+### Hyprland keybinding example (`~/.config/hypr/bindings.lua`)
+
+To cycle through on-board profiles (`P1`–`P5`) or DPI stages (`1`–`5`) with a keyboard shortcut without colliding with Omarchy's default bindings, add this to `~/.config/hypr/bindings.lua`:
+
+```lua
+o.bind("SUPER + CTRL + M", "Razer: Next profile", "omarchy-shell oma.razer nextProfile")
+-- Optional: cycle DPI stages within the current profile
+-- o.bind("SUPER + ALT + M", "Razer: Next DPI stage", "omarchy-shell oma.razer nextStage")
 ```
 
 ---
@@ -181,12 +199,16 @@ The backend script also works on its own, outside the desktop shell:
 ./razer_ctl.py status --json                 # Device, capabilities and profile status as JSON
 ./razer_ctl.py set-dpi 1600                  # Set DPI
 ./razer_ctl.py set-stage 2                   # Switch DPI stage
+./razer_ctl.py set-stage next                # Cycle to next DPI stage (1 → 5 → 1)
+./razer_ctl.py set-stage prev                # Cycle to previous DPI stage
 ./razer_ctl.py set-dpi-stages 800 1600 3200 4800 6400 --active 2   # Set all 5 stage values
 ./razer_ctl.py set-poll-rate 8000            # Set polling rate in Hz
 ./razer_ctl.py set-effect static --color "#00FF00"                 # Static green (all zones)
 ./razer_ctl.py set-effect static --color "#FF0000" --zone underglow
 ./razer_ctl.py set-brightness 50 --zone logo
 ./razer_ctl.py profile switch 1              # Switch on-board profile
+./razer_ctl.py profile next                  # Cycle to next on-board profile (P1 → P5 → P1)
+./razer_ctl.py profile prev                  # Cycle to previous on-board profile
 ./razer_ctl.py profile save --slot 1         # Save current settings to a slot
 
 # Edit any profile slot (new in 2.0)
@@ -212,6 +234,7 @@ Set these options in `~/.config/omarchy/shell.json` under your bar configuration
   "showDpiInBar": true,
   "onlyWhenConnected": false,
   "notifyOnConnect": true,
+  "notifyOnProfileSwitch": true,
   "language": "en"
 }
 ```
@@ -221,6 +244,7 @@ Set these options in `~/.config/omarchy/shell.json` under your bar configuration
 | `showDpiInBar` | `boolean` | `true` | Show the current DPI next to the mouse icon in the bar |
 | `onlyWhenConnected` | `boolean` | `false` | Hide the widget when the mouse is disconnected |
 | `notifyOnConnect` | `boolean` | `true` | Send a desktop notification when the mouse is plugged in |
+| `notifyOnProfileSwitch` | `boolean` | `true` | Send a desktop notification when switching profiles via keybinding or IPC |
 | `language` | `string` | `"en"` | Interface language: `"en"` (default), `"es"`, or `"auto"` (system locale) |
 
 ---
