@@ -185,6 +185,20 @@ Panel {
     root.showZone(root.isZone(root.selectedZone) ? root.selectedZone : "all")
   }
 
+  property var actionQueue: []
+
+  function runHardwareAction(args) {
+    if (actionProc.running) {
+      if (root.actionQueue.length >= 5) {
+        root.actionQueue.shift()
+      }
+      root.actionQueue.push(args)
+      return
+    }
+    actionProc.command = args
+    actionProc.running = true
+  }
+
   function refresh() {
     if (pollProc.running) return
     isPolling = true
@@ -201,7 +215,7 @@ Panel {
       patch.active_stage = root.currentActiveStage
     }
     root.updateCachedProfile(root.currentOnboardSlot, patch)
-    Quickshell.execDetached([root.scriptPath, "set-dpi", String(val)])
+    root.runHardwareAction([root.scriptPath, "set-dpi", String(val)])
   }
 
   function cycleStage(delta, notify) {
@@ -239,7 +253,7 @@ Panel {
         "--exec", "omarchy-shell", "oma.razer", "open"
       ])
     }
-    Quickshell.execDetached([root.scriptPath, "set-stage", String(idx)])
+    root.runHardwareAction([root.scriptPath, "set-stage", String(idx)])
   }
 
   function applyPollRate(hz) {
@@ -247,7 +261,7 @@ Panel {
     root.lastUserActionTime = Date.now()
     root.currentPollRate = hz
     root.updateCachedProfile(root.currentOnboardSlot, { poll_rate: hz })
-    Quickshell.execDetached([root.scriptPath, "set-poll-rate", String(hz)])
+    root.runHardwareAction([root.scriptPath, "set-poll-rate", String(hz)])
   }
 
   function isZone(zone) {
@@ -297,7 +311,7 @@ Panel {
     val = Math.max(0, Math.min(100, Math.round(val)))
     root.lastUserActionTime = Date.now()
     root.storeLighting(zone, { brightness: val })
-    Quickshell.execDetached([root.scriptPath, "set-brightness", String(val), "--zone", zone])
+    root.runHardwareAction([root.scriptPath, "set-brightness", String(val), "--zone", zone])
   }
 
   function applyEffect(eff, color, zone) {
@@ -310,7 +324,7 @@ Panel {
       change.brightness = 100
     }
     root.storeLighting(zone, change)
-    Quickshell.execDetached([root.scriptPath, "set-effect", eff, "--color", change.effect_color, "--zone", zone])
+    root.runHardwareAction([root.scriptPath, "set-effect", eff, "--color", change.effect_color, "--zone", zone])
   }
 
   function cycleProfile(delta, notify) {
@@ -365,7 +379,7 @@ Panel {
     root.lastUserActionTime = Date.now()
     root.switchingToSlot = slotNum
     root.isSwitchingProfile = true
-    Quickshell.execDetached([root.scriptPath, "profile", "save", "--slot", String(slotNum)])
+    root.runHardwareAction([root.scriptPath, "profile", "save", "--slot", String(slotNum)])
     profileRefreshTimer.restart()
   }
 
@@ -423,7 +437,7 @@ Panel {
     root.isSwitchingProfile = true
     profileRefreshTimer.restart()
 
-    Quickshell.execDetached([
+    root.runHardwareAction([
       root.scriptPath, "profile", "update",
       "--slot", String(s),
       "--badge-color", root.draftBadgeColor,
@@ -439,16 +453,70 @@ Panel {
   }
 
   Process {
+    id: actionProc
+    command: []
+    onRunningChanged: {
+      if (running) {
+        actionWatchdog.restart()
+      } else {
+        actionWatchdog.stop()
+      }
+    }
+    onExited: function(code) {
+      actionWatchdog.stop()
+      if (root.actionQueue.length > 0) {
+        var nextCmd = root.actionQueue.shift()
+        actionProc.command = nextCmd
+        actionProc.running = true
+      }
+    }
+  }
+
+  Timer {
+    id: actionWatchdog
+    interval: 3000
+    repeat: false
+    onTriggered: {
+      if (actionProc.running) {
+        actionProc.running = false
+      }
+      root.actionQueue = []
+    }
+  }
+
+  Process {
     id: switchProc
     property string targetSlot: "1"
     command: [root.scriptPath, "profile", "switch", switchProc.targetSlot]
+    onRunningChanged: {
+      if (running) {
+        switchWatchdog.restart()
+      } else {
+        switchWatchdog.stop()
+      }
+    }
     onExited: function(code) {
+      switchWatchdog.stop()
       if (root.pendingSwitchSlot > 0 && String(root.pendingSwitchSlot) !== switchProc.targetSlot) {
         var nextSlot = root.pendingSwitchSlot
         root.pendingSwitchSlot = 0
         switchProc.targetSlot = String(nextSlot)
         switchProc.running = true
         return
+      }
+      root.pendingSwitchSlot = 0
+      root.isSwitchingProfile = false
+      root.switchingToSlot = 0
+    }
+  }
+
+  Timer {
+    id: switchWatchdog
+    interval: 3000
+    repeat: false
+    onTriggered: {
+      if (switchProc.running) {
+        switchProc.running = false
       }
       root.pendingSwitchSlot = 0
       root.isSwitchingProfile = false
@@ -523,9 +591,17 @@ Panel {
   Process {
     id: pollProc
     command: [root.scriptPath, "status", "--json"]
+    onRunningChanged: {
+      if (running) {
+        pollWatchdog.restart()
+      } else {
+        pollWatchdog.stop()
+      }
+    }
     stdout: StdioCollector {
       waitForEnd: true
       onStreamFinished: {
+        pollWatchdog.stop()
         root.isPolling = false
         var state = Model.parseOutput(text)
         var wasConnected = root.deviceConnected
@@ -571,6 +647,19 @@ Panel {
       }
     }
     onExited: function(code) {
+      pollWatchdog.stop()
+      root.isPolling = false
+    }
+  }
+
+  Timer {
+    id: pollWatchdog
+    interval: 3000
+    repeat: false
+    onTriggered: {
+      if (pollProc.running) {
+        pollProc.running = false
+      }
       root.isPolling = false
     }
   }
@@ -630,9 +719,15 @@ Panel {
       Style.space(620)
     )
 
-    onOpenChanged: if (open) {
-      root.refresh()
-      Qt.callLater(function() { keyCatcher.forceActiveFocus() })
+    property bool mouseEntered: false
+
+    onOpenChanged: {
+      hoverCloseTimer.stop()
+      mouseEntered = panelHover.hovered
+      if (open) {
+        root.refresh()
+        Qt.callLater(function() { keyCatcher.forceActiveFocus() })
+      }
     }
 
     PanelKeyCatcher {
@@ -640,6 +735,30 @@ Panel {
       anchors.fill: parent
       onCloseRequested: root.close()
       onTabRequested: function(direction) { root.switchPanel(direction) }
+
+      Timer {
+        id: hoverCloseTimer
+        interval: 150
+        repeat: false
+        onTriggered: {
+          if (root.opened && !panelHover.hovered) {
+            root.close()
+          }
+        }
+      }
+
+      HoverHandler {
+        id: panelHover
+        margin: panel.padding
+        onHoveredChanged: {
+          if (hovered) {
+            panel.mouseEntered = true
+            hoverCloseTimer.stop()
+          } else if (panel.mouseEntered && root.opened) {
+            hoverCloseTimer.restart()
+          }
+        }
+      }
 
       Flickable {
         id: panelFlick

@@ -93,6 +93,9 @@ WIRELESS_DONGLE_PIDS = {pid for pid, meta in DEVICE_DB.items() if meta.get("is_d
 RAZER_STATUS_BUSY = 0x01       # command accepted, device hasn't answered yet
 RESPONSE_TIMEOUT_S = 0.3
 RESPONSE_POLL_S = 0.005
+DEVICE_LOCK_TIMEOUT_S = 1.0     # Bounded timeout for acquiring device lock
+DEVICE_LOCK_POLL_S = 0.05       # Polling interval for device lock
+PROCESS_TIMEOUT_S = 4           # Maximum wall-clock process duration bound
 
 # Linux HIDRAW IOCTL definitions
 def _IOC(dir_, typ, nr, size):
@@ -299,12 +302,31 @@ class RazerDeviceManager:
             return False
         try:
             self.fd = os.open(self.hidraw_path, os.O_RDWR)
-            try:
-                fcntl.flock(self.fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            except (BlockingIOError, OSError):
-                fcntl.flock(self.fd, fcntl.LOCK_EX)
+            deadline = time.monotonic() + DEVICE_LOCK_TIMEOUT_S
+            locked = False
+            while True:
+                try:
+                    fcntl.flock(self.fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    locked = True
+                    break
+                except (BlockingIOError, OSError):
+                    if time.monotonic() >= deadline:
+                        break
+                    time.sleep(DEVICE_LOCK_POLL_S)
+            if not locked:
+                try:
+                    os.close(self.fd)
+                except Exception:
+                    pass
+                self.fd = None
+                return False
             return True
         except Exception:
+            if self.fd is not None:
+                try:
+                    os.close(self.fd)
+                except Exception:
+                    pass
             self.fd = None
             return False
 
@@ -861,6 +883,11 @@ def apply_profile(profile_data, all_profiles=None):
 
 def main():
     import time
+    try:
+        import signal
+        signal.alarm(PROCESS_TIMEOUT_S)
+    except Exception:
+        pass
     parser = argparse.ArgumentParser(description="Omarchy Razer Device Controller")
     sub = parser.add_subparsers(dest="cmd")
 

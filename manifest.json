@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "oma.razer",
   "name": "Oma Razer",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "author": "Gregory Lara",
   "license": "MIT",
   "description": "Razer mouse control for Omarchy: on-board profiles with a full Profile Settings editor, 5-stage DPI, polling up to 8000 Hz, Chroma RGB, and multi-model support",

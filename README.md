@@ -253,7 +253,7 @@ Set these options in `~/.config/omarchy/shell.json` under your bar configuration
 
 - **`Panel.qml`**: Quickshell panel and status bar widget, including the Profile Settings view and the profile cache.
 - **`Model.js`**: telemetry parsing, default profiles, badge color mapping and translations.
-- **`razer_ctl.py`**: direct HID controller. It includes the device database, capability probing, bottom-button and on-board slot sync, and uses `ioctl(HIDIOCSFEATURE / HIDIOCGFEATURE)` with `fcntl.flock` locking for safe concurrent access.
+- **`razer_ctl.py`**: direct HID controller. It includes the device database, capability probing, bottom-button and on-board slot sync, and uses `ioctl(HIDIOCSFEATURE / HIDIOCGFEATURE)` with bounded `fcntl.flock` locking and watchdogs for safe concurrent access.
 - **`profiles.json`**: default profile template for new installs.
 - **`99-razer-omarchy.rules`**: udev rule for rootless device access.
 - **`setup.sh`**: udev installation helper.

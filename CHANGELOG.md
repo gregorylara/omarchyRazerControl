@@ -2,6 +2,15 @@
 
 All notable changes to Oma Razer Control are documented in this file.
 
+## [2.0.2] - 2026-10-28
+
+### Security & Hardening
+- **Bounded device locking in `razer_ctl.py`**: replaced indefinitely blocking `fcntl.flock(LOCK_EX)` fallback with non-blocking attempts bounded by a 1.0s wall-clock timeout (`DEVICE_LOCK_TIMEOUT_S`), gracefully failing if the lock cannot be acquired.
+- **Strict process-duration watchdog in `razer_ctl.py`**: added `signal.alarm(4)` to enforce a hard 4-second execution ceiling on any hardware controller command.
+- **Process duration & concurrency bounds in `Panel.qml`**:
+  - Added 3-second wall-clock watchdogs (`switchWatchdog` and `pollWatchdog`) for `switchProc` and `pollProc` to prevent controller stalls from blocking status refreshes or profile switches indefinitely.
+  - Replaced unbounded detached helper executions (`Quickshell.execDetached`) with a serialized, bounded `actionProc` Process queue (concurrency bound = 1, max queue depth = 5) paired with a dedicated 3-second `actionWatchdog`.
+
 ## [2.0.1] - 2026-10-19
 
 ### Added
