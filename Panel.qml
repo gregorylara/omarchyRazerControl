@@ -683,19 +683,21 @@ Panel {
     anchors.fill: parent
     bar: root.bar
     visible: root.visible
-    text: {
+    text: "󰍽"
+    labelText: {
       if (root.showDpiInBar && root.deviceConnected && !vertical) {
-        var label = "󰍽 " + root.currentDpi
+        var label = String(root.currentDpi)
         if (root.batteryLevel >= 0) {
           label += " " + root.batteryLevel + "%"
         }
         return label
       }
-      return "󰍽"
+      return ""
     }
-    slotSize: Style.bar.iconSlot * (root.showDpiInBar && root.deviceConnected && !vertical ? (root.batteryLevel >= 0 ? 2.9 : 2.0) : 1.0)
+    slotSize: Style.bar.iconSlot * (root.showDpiInBar && root.deviceConnected && !vertical ? (root.batteryLevel >= 0 ? 3.2 : 2.3) : 1.0)
     tooltipText: root.deviceName + (root.deviceConnected ? (" (" + root.currentDpi + " DPI @ " + root.currentPollRate + " Hz" + (root.batteryLevel >= 0 ? ", batteri " + root.batteryLevel + " %" + (root.charging ? " (laddar)" : "") : "") + ")") : (" " + root.t("disconnected")))
-    active: root.deviceConnected
+    active: root.opened
+    activeColor: Color.accent
     onPressed: function(b) {
       if (b === Qt.RightButton) {
         root.refresh()

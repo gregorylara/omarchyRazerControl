@@ -2,7 +2,7 @@
 
 <div align="center">
 
-[![Version](https://img.shields.io/badge/Version-2.0.1-00FF00?style=for-the-badge)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-2.0.3-00FF00?style=for-the-badge)](CHANGELOG.md)
 [![Omarchy Plugin](https://img.shields.io/badge/Omarchy-Plugin-black?style=for-the-badge&logo=arch-linux)](https://omarchy.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-00FF00?style=for-the-badge)](LICENSE)
 [![Platform: Linux](https://img.shields.io/badge/Platform-Linux-blue?style=for-the-badge&logo=linux)](https://kernel.org)

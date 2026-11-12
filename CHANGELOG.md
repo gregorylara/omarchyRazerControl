@@ -2,6 +2,14 @@
 
 All notable changes to Oma Razer Control are documented in this file.
 
+## [2.0.3] - 2026-11-12
+
+### Fixed
+- **Omarchy 4.5+ bar widget rendering (`Panel.qml`)**:
+  - Separated the bar icon glyph (`text: "󰍽"`) from the DPI/battery readout using `BarIconButton.labelText`, preventing `OpticalGlyph` from shrinking the icon and text to fit inside a single icon slot.
+  - Adjusted horizontal `slotSize` proportions when DPI/battery labels are shown.
+  - Switched bar button active styling from `active: root.deviceConnected` (which now maps to `bar.urgent` red in Omarchy 4.5+) to `active: root.opened` with `activeColor: Color.accent`.
+
 ## [2.0.2] - 2026-10-28
 
 ### Security & Hardening
