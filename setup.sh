@@ -1,8 +1,9 @@
 #!/bin/bash
 set -e
 
-RULE_SRC="$(dirname "$0")/99-razer-omarchy.rules"
-RULE_DEST="/etc/udev/rules.d/99-razer-omarchy.rules"
+RULE_SRC="$(dirname "$0")/70-razer-omarchy.rules"
+RULE_DEST="/etc/udev/rules.d/70-razer-omarchy.rules"
+LEGACY_RULE="/etc/udev/rules.d/99-razer-omarchy.rules"
 
 echo "=========================================================="
 echo " Omarchy Razer Control - Hardware Permissions Setup"
@@ -20,6 +21,11 @@ if [ "$EUID" -ne 0 ]; then
     fi
 fi
 
+if [ -f "$LEGACY_RULE" ]; then
+    echo "Removing legacy rule $LEGACY_RULE..."
+    rm -f "$LEGACY_RULE"
+fi
+
 echo "Installing $RULE_DEST..."
 cp "$RULE_SRC" "$RULE_DEST"
 chmod 644 "$RULE_DEST"
@@ -27,6 +33,7 @@ chmod 644 "$RULE_DEST"
 echo "Reloading udev rules..."
 udevadm control --reload-rules
 udevadm trigger --subsystem-match=hidraw
+udevadm settle
 
 echo "Setup complete! Razer mice now have user-level access."
 echo "Unplug and replug your Razer mouse if changes do not appear immediately."

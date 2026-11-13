@@ -1,5 +1,0 @@
-# Omarchy udev rules for Razer gaming mice (PIDs 00xx)
-# Restricts access to mice only (excluding keyboards 01xx/02xx) and uses active-seat uaccess with 0660 mode.
-
-SUBSYSTEM=="hidraw", ATTRS{idVendor}=="1532", ATTRS{idProduct}=="00*", TAG+="uaccess", MODE="0660", GROUP="input"
-KERNEL=="hidraw*", ATTRS{idVendor}=="1532", ATTRS{idProduct}=="00*", TAG+="uaccess", MODE="0660", GROUP="input"

@@ -1,0 +1,6 @@
+# Omarchy udev rules for Razer gaming mice (PIDs 00xx)
+# Restricts access to mice only (excluding keyboards 01xx/02xx) and grants active-seat uaccess with 0660 mode.
+# Named 70-* so TAG+="uaccess" is applied before 73-seat-late.rules dispatches the uaccess ACL builtin.
+
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="1532", ATTRS{idProduct}=="00*", TAG+="uaccess", MODE="0660"
+KERNEL=="hidraw*", ATTRS{idVendor}=="1532", ATTRS{idProduct}=="00*", TAG+="uaccess", MODE="0660"

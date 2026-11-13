@@ -2,6 +2,14 @@
 
 All notable changes to Oma Razer Control are documented in this file.
 
+## [2.0.4] - 2026-11-13
+
+### Fixed
+- **Active-seat udev ACL ordering (`70-razer-omarchy.rules`, `setup.sh`)**:
+  - Renamed `99-razer-omarchy.rules` to `70-razer-omarchy.rules` so `TAG+="uaccess"` is applied before systemd's `73-seat-late.rules` dispatches `RUN{builtin}+="uaccess"`.
+  - Removed `GROUP="input"` so hardware access is granted strictly to the active logged-in seat user via `uaccess` ACLs (`MODE="0660"`), rather than all `input` group members across seats.
+  - Updated `setup.sh` to remove any legacy `/etc/udev/rules.d/99-razer-omarchy.rules` on upgrade and run `udevadm settle` after triggering `hidraw`.
+
 ## [2.0.3] - 2026-11-12
 
 ### Fixed

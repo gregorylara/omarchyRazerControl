@@ -140,7 +140,7 @@ cd ~/.config/omarchy/plugins/oma.razer
 
 You can also click the **Enable** button on the permissions banner inside the plugin panel.
 
-This installs `99-razer-omarchy.rules` into `/etc/udev/rules.d/` and grants your active logged-in seat user read/write access to Razer mice.
+This installs `70-razer-omarchy.rules` into `/etc/udev/rules.d/` (removing any legacy `99-razer-omarchy.rules`) and grants only your active logged-in seat user read/write access to Razer mice via `uaccess`.
 
 ---
 
@@ -255,7 +255,7 @@ Set these options in `~/.config/omarchy/shell.json` under your bar configuration
 - **`Model.js`**: telemetry parsing, default profiles, badge color mapping and translations.
 - **`razer_ctl.py`**: direct HID controller. It includes the device database, capability probing, bottom-button and on-board slot sync, and uses `ioctl(HIDIOCSFEATURE / HIDIOCGFEATURE)` with bounded `fcntl.flock` locking and watchdogs for safe concurrent access.
 - **`profiles.json`**: default profile template for new installs.
-- **`99-razer-omarchy.rules`**: udev rule for rootless device access.
+- **`70-razer-omarchy.rules`**: udev rule for rootless active-seat device access.
 - **`setup.sh`**: udev installation helper.
 
 ---
